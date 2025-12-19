@@ -1,0 +1,6 @@
+node_modules
+dist
+.vscode-test/
+.vscode-test-web/
+.env
+.DS_Store

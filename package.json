@@ -1,0 +1,17 @@
+{
+  "name": "busy-bee",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": {
+    "fmt": "prettier --write .",
+    "lint": "echo \"(add ESLint at package level)\"",
+    "dev": "concurrently -n BACK,DASH -c green,cyan \"npm run -w packages/backend start:dev\" \"npm run -w packages/dashboard dev\"",
+    "build": "npm run -w packages/extension build && npm run -w packages/backend build && npm run -w packages/dashboard build",
+    "test": "npm -ws run test"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0",
+    "prettier": "^3.3.0",
+    "typescript": "^5.6.0"
+  }
+}
