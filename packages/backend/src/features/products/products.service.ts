@@ -1,5 +1,5 @@
 // in this products.service.ts file, we implemented business logic for related to products feature
-import ProductModel from '../../db/models/Product.model.js';
+import ProductModel from './product.model.js';
 import { Product, CreateProductData, UpdateProductData } from './products.types.js';
 
 /**

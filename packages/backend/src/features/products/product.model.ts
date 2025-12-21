@@ -5,7 +5,7 @@ import {
   CreateProductData,
   UpdateProductData,
   ProductQueryResult,
-} from '../../features/products/products.types.js';
+} from './products.types.js';
 
 class ProductModel {
   // Create a new product
