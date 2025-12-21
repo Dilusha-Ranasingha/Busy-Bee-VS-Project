@@ -1,73 +1,88 @@
-# React + TypeScript + Vite
+# Dashboard Package
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A collaborative React + TypeScript dashboard for product management.
 
-Currently, two official plugins are available:
+## 📁 Project Structure
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+packages/dashboard/
+├── src/
+│   ├── types/                         # Shared TypeScript types
+│   │   ├── product.types.ts          # Product interfaces
+│   │   └── api.types.ts              # API response types
+│   │
+│   ├── services/                      # API layer (Team member can own this)
+│   │   ├── api.client.ts             # Base HTTP client
+│   │   └── product.service.ts        # Product API calls
+│   │
+│   ├── hooks/                         # Custom React hooks
+│   │   └── useProducts.ts            # Product data hook
+│   │
+│   ├── components/                    # Reusable components
+│   │   ├── ui/                       # Base UI components
+│   │   │   ├── Card.tsx
+│   │   │   ├── Button.tsx
+│   │   │   ├── Input.tsx
+│   │   │   ├── Textarea.tsx
+│   │   │   ├── LoadingSpinner.tsx
+│   │   │   └── index.ts
+│   │   └── charts/                   # Chart components
+│   │       └── ChartComponents.tsx
+│   │
+│   ├── pages/                         # Page components (each dev owns a page)
+│   │   ├── Dashboard/
+│   │   │   ├── DashboardPage.tsx
+│   │   │   └── index.ts
+│   │   ├── AddProduct/
+│   │   │   ├── AddProductPage.tsx
+│   │   │   └── index.ts
+│   │   └── ProductList/
+│   │       ├── ProductListPage.tsx
+│   │       └── index.ts
+│   │
+│   ├── App.tsx                        # Main app with routing
+│   ├── main.tsx
+│   └── index.css
+│
+├── .env                               # Local environment
+├── .env.example                       # Template for team
+└── package.json
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 🎯 Key Features for Team Collaboration
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+- **Feature Isolation** - Each page in its own folder
+- **Shared Components** - Reusable UI in `/components/ui`
+- **Type Safety** - Full TypeScript with interfaces
+- **Service Layer** - Clean API separation
+- **No Conflicts** - Team members can work on different pages independently
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## 🚀 Getting Started
+
+1. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+2. Copy environment template:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. Start development server:
+   ```bash
+   npm run dev
+   ```
+
+## 👥 Team Development
+
+Each team member can work on different pages independently:
+- **Developer 1**: Dashboard page (`/pages/Dashboard`)
+- **Developer 2**: Add Product page (`/pages/AddProduct`)
+- **Developer 3**: Product List page (`/pages/ProductList`)
+- **Developer 4**: API services (`/services`)
+
+All team members share:
+- `/types` - Type definitions
+- `/components/ui` - UI components
+- `/hooks` - Custom React hooks
