@@ -30,6 +30,7 @@
     "views": {
       "busy-bee-container": [
         {
+          "icon": "resources/bee-icon.png",
           "type": "webview",
           "id": "busyBee.productDashboard",
           "name": "Product Dashboard"
@@ -49,7 +50,9 @@
     "pretest": "npm run compile-tests && npm run compile && npm run lint",
     "check-types": "tsc --noEmit",
     "lint": "eslint src",
-    "test": "vscode-test"
+    "test": "vscode-test",
+    "dev": "node esbuild.js --watch",
+    "build:dashboard": "cd ../dashboard && npm run build && mkdir -p ../extension/dist/dashboard && cp -r dist/* ../extension/dist/dashboard/"
   },
   "devDependencies": {
     "@types/vscode": "^1.107.0",
