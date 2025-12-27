@@ -8,12 +8,12 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   ({ variant = 'primary', size = 'md', className = '', children, ...props }, ref) => {
-    const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium shadow transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-600';
+    const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium shadow-vscode transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus';
     
     const variants = {
-      primary: 'bg-indigo-600 text-white hover:bg-indigo-500',
-      secondary: 'bg-gray-100 text-gray-900 hover:bg-gray-200',
-      outline: 'border border-gray-300 bg-white text-gray-700 hover:bg-gray-50',
+      primary: 'bg-brand-primary text-white hover:bg-brand-primary-hover',
+      secondary: 'bg-vscode-button-secondary-bg text-vscode-button-secondary-fg hover:bg-vscode-button-secondary-hover',
+      outline: 'border border-vscode-input-border bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg',
     };
 
     const sizes = {

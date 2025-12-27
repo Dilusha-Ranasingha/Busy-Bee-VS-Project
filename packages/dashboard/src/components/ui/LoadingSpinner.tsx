@@ -1,8 +1,8 @@
 export function LoadingSpinner({ text = 'Loading...' }: { text?: string }) {
   return (
-    <div className="flex items-center gap-2 text-gray-600">
+    <div className="flex items-center gap-2 text-vscode-description">
       <svg
-        className="size-4 animate-spin text-indigo-600"
+        className="size-4 animate-spin text-brand-primary"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

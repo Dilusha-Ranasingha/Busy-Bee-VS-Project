@@ -7,9 +7,9 @@ interface KpiCardProps {
 
 export function KpiCard({ title, value }: KpiCardProps) {
   return (
-    <div className="bg-white rounded-xl shadow ring-1 ring-gray-200 p-4">
-      <div className="text-sm text-gray-600">{title}</div>
-      <div className="mt-1 text-2xl font-semibold">
+    <div className="bg-vscode-widget-bg rounded-xl shadow-vscode ring-1 ring-vscode-widget-border p-4">
+      <div className="text-sm text-vscode-description">{title}</div>
+      <div className="mt-1 text-2xl font-semibold text-vscode-foreground">
         {Number(value || 0).toLocaleString()}
       </div>
     </div>
@@ -25,10 +25,10 @@ interface ChartCardProps {
 
 export function ChartCard({ title, description, className = '', children }: ChartCardProps) {
   return (
-    <section className={`bg-white rounded-xl shadow ring-1 ring-gray-200 p-4 ${className}`}>
+    <section className={`bg-vscode-widget-bg rounded-xl shadow-vscode ring-1 ring-vscode-widget-border p-4 ${className}`}>
       <header className="mb-2">
-        <h3 className="text-lg font-semibold leading-6">{title}</h3>
-        {description && <p className="text-sm text-gray-600">{description}</p>}
+        <h3 className="text-lg font-semibold leading-6 text-vscode-foreground">{title}</h3>
+        {description && <p className="text-sm text-vscode-description">{description}</p>}
       </header>
       <div className="py-2 flex items-center justify-center">{children}</div>
     </section>
@@ -36,14 +36,14 @@ export function ChartCard({ title, description, className = '', children }: Char
 }
 
 export function EmptyState() {
-  return <div className="text-gray-600 text-sm">No data</div>;
+  return <div className="text-vscode-description text-sm">No data</div>;
 }
 
 export function ChartSkeleton() {
   return (
-    <div className="w-full flex items-center justify-center gap-2 text-gray-600">
+    <div className="w-full flex items-center justify-center gap-2 text-vscode-description">
       <svg
-        className="size-4 animate-spin text-indigo-600"
+        className="size-4 animate-spin text-brand-primary"
         viewBox="0 0 24 24"
         fill="none"
         stroke="currentColor"

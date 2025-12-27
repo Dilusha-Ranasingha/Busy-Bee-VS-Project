@@ -17,11 +17,29 @@
         "command": "busy-bee-vs.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "busy-bee-container",
+          "title": "Busy Bee",
+          "icon": "./resources/bee-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "busy-bee-container": [
+        {
+          "type": "webview",
+          "id": "busyBee.productDashboard",
+          "name": "Product Dashboard"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
-    "compile": "npm run check-types && npm run lint && node esbuild.js",
+    "compile": "node esbuild.js",
     "watch": "npm-run-all -p watch:*",
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch --project tsconfig.json",

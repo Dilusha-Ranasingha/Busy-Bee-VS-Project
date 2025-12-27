@@ -115,7 +115,7 @@ export default function AddProductPage() {
               {status && (
                 <span
                   className={`text-sm ${
-                    status.includes('success') ? 'text-green-600' : 'text-red-600'
+                    status.includes('success') ? 'text-brand-accent' : 'text-vscode-error'
                   }`}
                   role="status"
                 >

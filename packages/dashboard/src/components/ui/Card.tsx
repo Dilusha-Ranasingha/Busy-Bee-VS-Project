@@ -7,7 +7,7 @@ interface CardProps {
 
 export function Card({ children, className = '' }: CardProps) {
   return (
-    <div className={`bg-white rounded-xl shadow ring-1 ring-gray-200 ${className}`}>
+    <div className={`bg-vscode-widget-bg rounded-xl shadow-vscode ring-1 ring-vscode-widget-border ${className}`}>
       {children}
     </div>
   );
@@ -20,7 +20,7 @@ interface CardHeaderProps {
 
 export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <div className={`px-6 py-4 border-b ${className}`}>
+    <div className={`px-6 py-4 border-b border-vscode-panel-border ${className}`}>
       {children}
     </div>
   );
@@ -41,7 +41,7 @@ interface CardTitleProps {
 }
 
 export function CardTitle({ children, className = '' }: CardTitleProps) {
-  return <h2 className={`text-lg font-semibold ${className}`}>{children}</h2>;
+  return <h2 className={`text-lg font-semibold text-vscode-foreground ${className}`}>{children}</h2>;
 }
 
 interface CardDescriptionProps {
@@ -50,5 +50,5 @@ interface CardDescriptionProps {
 }
 
 export function CardDescription({ children, className = '' }: CardDescriptionProps) {
-  return <p className={`text-sm text-gray-500 ${className}`}>{children}</p>;
+  return <p className={`text-sm text-vscode-description ${className}`}>{children}</p>;
 }

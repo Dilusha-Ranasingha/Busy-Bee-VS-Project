@@ -32,7 +32,7 @@ export default function ProductListPage() {
 
   if (error) {
     return (
-      <div className="text-red-600">
+      <div className="text-vscode-error">
         Error: {error}
       </div>
     );
@@ -40,7 +40,7 @@ export default function ProductListPage() {
 
   if (!items.length) {
     return (
-      <div className="text-gray-600">No products yet.</div>
+      <div className="text-vscode-description">No products yet.</div>
     );
   }
 
@@ -49,32 +49,32 @@ export default function ProductListPage() {
       {items.map((product) => (
         <li
           key={product.id}
-          className="bg-white rounded-xl shadow ring-1 ring-gray-200 p-4"
+          className="bg-vscode-widget-bg rounded-xl shadow-vscode ring-1 ring-vscode-widget-border p-4"
         >
           <div className="flex items-start justify-between mb-2">
-            <h3 className="text-lg font-semibold leading-6">{product.name}</h3>
-            <span className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-600/20">
+            <h3 className="text-lg font-semibold leading-6 text-vscode-foreground">{product.name}</h3>
+            <span className="inline-flex items-center rounded-full bg-brand-primary/10 px-2 py-0.5 text-xs font-medium text-brand-primary ring-1 ring-inset ring-brand-primary/20">
               ${product.price}
             </span>
           </div>
 
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600 mb-2">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-vscode-description mb-2">
             <div className="flex items-center gap-2">
-              <dt className="font-medium text-gray-700">Qty</dt>
+              <dt className="font-medium text-vscode-foreground">Qty</dt>
               <dd>{product.quantity}</dd>
             </div>
             <div className="flex items-center gap-2">
-              <dt className="font-medium text-gray-700">Sold</dt>
+              <dt className="font-medium text-vscode-foreground">Sold</dt>
               <dd>{product.soldCount}</dd>
             </div>
             <div className="col-span-2 flex items-center gap-2">
-              <dt className="font-medium text-gray-700">Created</dt>
+              <dt className="font-medium text-vscode-foreground">Created</dt>
               <dd>{new Date(product.createdAt).toLocaleString()}</dd>
             </div>
           </dl>
 
           {product.description && (
-            <p className="text-sm text-gray-600">{product.description}</p>
+            <p className="text-sm text-vscode-description">{product.description}</p>
           )}
         </li>
       ))}
