@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
+import { FileSwitchRatePage } from './pages/FileSwitchRate';
 
-type Tab = 'dashboard' | 'add' | 'list';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');
@@ -44,6 +45,16 @@ export default function App() {
             >
               List
             </button>
+            <button
+              onClick={() => setTab('fileswitch')}
+              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus border-l border-vscode-widget-border ${
+                tab === 'fileswitch'
+                  ? 'bg-brand-primary text-white'
+                  : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg'
+              }`}
+            >
+              File Switch
+            </button>
           </nav>
         </div>
       </header>
@@ -52,6 +63,7 @@ export default function App() {
         {tab === 'dashboard' && <DashboardPage />}
         {tab === 'add' && <AddProductPage />}
         {tab === 'list' && <ProductListPage />}
+        {tab === 'fileswitch' && <FileSwitchRatePage />}
       </main>
     </div>
   );

@@ -4,6 +4,7 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import productRoutes from '../features/products/products.routes.js';
+import fileSwitchRoutes from '../features/fileSwitch/fileSwitch.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
 const app: Application = express();
@@ -15,6 +16,7 @@ app.use(morgan('dev'));
 app.get('/api/health', (_: Request, res: Response) => res.json({ ok: true }));
 
 app.use('/api/products', productRoutes);
+app.use('/api/file-switch', fileSwitchRoutes);
 
 app.use(errorHandler);
 
