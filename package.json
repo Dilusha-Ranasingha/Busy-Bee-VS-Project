@@ -7,6 +7,8 @@
     "lint": "echo \"(add ESLint at package level)\"",
     "dev": "concurrently -n BACK,DASH -c green,cyan \"npm run -w packages/backend start:dev\" \"npm run -w packages/dashboard dev\"",
     "build": "npm run -w packages/extension build && npm run -w packages/backend build && npm run -w packages/dashboard build",
+    "build:extension": "node scripts/build-dashboard.js",
+    "dev:extension": "npm run -w packages/dashboard dev",
     "test": "npm -ws run test"
   },
   "devDependencies": {
