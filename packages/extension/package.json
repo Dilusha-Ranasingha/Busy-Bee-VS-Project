@@ -52,7 +52,7 @@
     "lint": "eslint src",
     "test": "vscode-test",
     "dev": "node esbuild.js --watch",
-    "build:dashboard": "cd ../dashboard && npm run build && mkdir -p ../extension/dist/dashboard && cp -r dist/* ../extension/dist/dashboard/"
+    "build:dashboard": "node ../../scripts/build-dashboard.js"
   },
   "devDependencies": {
     "@types/vscode": "^1.107.0",
