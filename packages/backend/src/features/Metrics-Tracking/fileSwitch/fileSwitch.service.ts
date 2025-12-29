@@ -1,4 +1,4 @@
-import { query } from '../../config/db.js';
+import { query } from '../../../config/db.js';
 import type { CreateFileSwitchWindowInput, FileSwitchWindowRow } from './fileSwitch.types.js';
 
 function isValidIsoDate(value: string): boolean {

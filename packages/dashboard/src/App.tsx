@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
-import { FileSwitchRatePage } from './pages/FileSwitchRate';
+import { FileSwitchRatePage } from './pages/Metrics-Tracking/FileSwitchRate';
 
 type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch';
 

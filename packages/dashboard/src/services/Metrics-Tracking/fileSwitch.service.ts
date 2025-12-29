@@ -1,5 +1,5 @@
-import { apiClient } from './api.client';
-import type { FileSwitchSessionSummary, FileSwitchWindow } from '../types/fileSwitch.types';
+import { apiClient } from '../api.client';
+import type { FileSwitchSessionSummary, FileSwitchWindow } from '../../types/Metrics-Tracking/fileSwitch.types';
 
 type ApiResponse<T> = { ok: boolean; data: T };
 

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { getFileSwitchSessions, getFileSwitchWindows } from "../../services/fileSwitch.service";
-import type { FileSwitchSessionSummary, FileSwitchWindow } from "../../types/fileSwitch.types";
+import { getFileSwitchSessions, getFileSwitchWindows } from "../../../services/Metrics-Tracking/fileSwitch.service";
+import type { FileSwitchSessionSummary, FileSwitchWindow } from "../../../types/Metrics-Tracking/fileSwitch.types";
 
 function formatDateInput(d: Date) {
   const yyyy = d.getFullYear();
@@ -224,6 +224,7 @@ export default function FileSwitchRatePage() {
   );
 }
 
+// This Stat component shows a label and value in a styled box,
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="border border-vscode-panel-border rounded-xl px-2.5 py-2 min-w-[120px] bg-vscode-editor-bg">
@@ -232,7 +233,7 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-
+// This Th component is a styled table header cell
 function Th({ children, align }: { children: React.ReactNode; align?: "left" | "right" }) {
   return (
     <th
@@ -244,7 +245,7 @@ function Th({ children, align }: { children: React.ReactNode; align?: "left" | "
     </th>
   );
 }
-
+// This Td component is a styled table data cell
 function Td({ children, align, className }: { children: React.ReactNode; align?: "left" | "right"; className?: string }) {
   return (
     <td
