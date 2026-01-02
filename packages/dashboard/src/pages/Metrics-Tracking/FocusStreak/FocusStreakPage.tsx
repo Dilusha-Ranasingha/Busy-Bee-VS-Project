@@ -1,6 +1,6 @@
+import { Trophy, Flame, Target, Folder, Award, Medal, Info } from 'lucide-react';
 import { useFocusStreaks } from '../../../hooks/useFocusStreaks';
 import { useAuth } from '../../../contexts/AuthContext';
-import { Card } from '../../../components/ui';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 
 const formatDuration = (minutes: number): string => {
@@ -30,7 +30,7 @@ export const FocusStreakPage = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
+      <div className="flex items-center justify-center min-h-[400px]">
         <LoadingSpinner />
       </div>
     );
@@ -38,103 +38,106 @@ export const FocusStreakPage = () => {
 
   if (error) {
     return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
+      <div className="p-3 rounded-lg border border-vscode-input-error-border bg-vscode-input-error-bg text-vscode-input-error-fg text-sm">
+        {error}
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Focus Streaks</h1>
-        <p className="text-gray-600">
-          Track your longest continuous coding sessions
-        </p>
-      </div>
-
+    <div className="space-y-4">
       {/* Best Global Streak */}
-      <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          🏆 Best Global Streak
-        </h2>
+      <section className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+        <div className="flex items-center gap-2 mb-3">
+          <Trophy className="text-brand-primary" size={20} strokeWidth={2} />
+          <h2 className="text-base font-semibold text-vscode-editor-fg">
+            Best Global Streak
+          </h2>
+        </div>
         
         {bestGlobalStreak ? (
-          <Card className="p-6 bg-gradient-to-br from-purple-50 to-blue-50 border-purple-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-5xl font-bold text-purple-600 mb-2">
-                  {formatDuration(bestGlobalStreak.durationMin)}
+          <div className="border border-vscode-panel-border rounded-lg p-4 bg-vscode-editor-bg">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 mb-2">
+                  <Flame className="text-brand-accent flex-shrink-0" size={24} />
+                  <div className="text-3xl font-bold text-brand-primary">
+                    {formatDuration(bestGlobalStreak.durationMin)}
+                  </div>
                 </div>
-                <div className="text-sm text-gray-600">
-                  {formatDateTime(bestGlobalStreak.startTs)} → {formatDateTime(bestGlobalStreak.endTs)}
+                <div className="text-xs text-vscode-foreground opacity-80">
+                  {formatDateTime(bestGlobalStreak.startTs)}
                 </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  Session: {bestGlobalStreak.sessionId.substring(0, 12)}...
+                <div className="text-xs text-vscode-foreground opacity-80">
+                  → {formatDateTime(bestGlobalStreak.endTs)}
+                </div>
+                <div className="text-[10px] text-vscode-descriptionForeground mt-2 font-mono break-all">
+                  Session: {bestGlobalStreak.sessionId.substring(0, 16)}...
                 </div>
               </div>
-              <div className="text-6xl">🔥</div>
             </div>
-          </Card>
+          </div>
         ) : (
-          <Card className="p-6 text-center text-gray-500">
-            <div className="text-4xl mb-2">🎯</div>
-            <p>No global streaks yet. Start coding to build your first streak!</p>
-          </Card>
+          <div className="border border-vscode-panel-border rounded-lg p-4 bg-vscode-editor-bg text-center">
+            <Target className="mx-auto mb-2 text-vscode-descriptionForeground" size={32} />
+            <p className="text-sm text-vscode-descriptionForeground">No global streaks yet. Start coding to build your first streak!</p>
+          </div>
         )}
       </section>
 
       {/* Best Per-File Streaks */}
-      <section>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          📁 Best Per-File Streaks
-        </h2>
+      <section className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+        <div className="flex items-center gap-2 mb-3">
+          <Folder className="text-brand-primary" size={20} strokeWidth={2} />
+          <h2 className="text-base font-semibold text-vscode-editor-fg">
+            Best Per-File Streaks
+          </h2>
+        </div>
         
         {bestPerFileStreaks.length > 0 ? (
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+          <div className="overflow-x-auto">
+            <table className="w-full border-separate border-spacing-0">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 text-left text-xs opacity-85 border-b border-vscode-panel-border text-vscode-foreground">
                     Rank
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 text-left text-xs opacity-85 border-b border-vscode-panel-border text-vscode-foreground">
                     Language
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-3 py-2.5 text-left text-xs opacity-85 border-b border-vscode-panel-border text-vscode-foreground">
                     Duration
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time Period
+                  <th className="px-3 py-2.5 text-left text-xs opacity-85 border-b border-vscode-panel-border text-vscode-foreground">
+                    Started
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {bestPerFileStreaks.map((streak, index) => (
-                  <tr key={streak.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        {index === 0 && <span className="text-2xl mr-2">🥇</span>}
-                        {index === 1 && <span className="text-2xl mr-2">🥈</span>}
-                        {index === 2 && <span className="text-2xl mr-2">🥉</span>}
-                        <span className="text-sm font-medium text-gray-900">
+                  <tr key={streak.id} className="hover:bg-vscode-list-hover-bg">
+                    <td className="px-3 py-2.5 border-b border-vscode-panel-border">
+                      <div className="flex items-center gap-2">
+                        {index === 0 && <Award className="text-yellow-500" size={16} />}
+                        {index === 1 && <Medal className="text-gray-400" size={16} />}
+                        {index === 2 && <Medal className="text-orange-400" size={16} />}
+                        {index > 2 && <span className="w-4" />}
+                        <span className="text-sm font-medium text-vscode-editor-fg">
                           #{index + 1}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                    <td className="px-3 py-2.5 border-b border-vscode-panel-border">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-brand-primary/10 text-brand-primary ring-1 ring-inset ring-brand-primary/20">
                         {streak.language || 'Unknown'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-semibold text-gray-900">
+                    <td className="px-3 py-2.5 border-b border-vscode-panel-border">
+                      <div className="text-sm font-semibold text-vscode-editor-fg">
                         {formatDuration(streak.durationMin)}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-3 py-2.5 border-b border-vscode-panel-border text-xs text-vscode-foreground opacity-80">
                       {formatDateTime(streak.startTs)}
                     </td>
                   </tr>
@@ -143,29 +146,32 @@ export const FocusStreakPage = () => {
             </table>
           </div>
         ) : (
-          <Card className="p-6 text-center text-gray-500">
-            <div className="text-4xl mb-2">📝</div>
-            <p>No per-file streaks yet. Start focusing on a file to build streaks!</p>
-          </Card>
+          <div className="border border-vscode-panel-border rounded-lg p-4 bg-vscode-editor-bg text-center">
+            <Folder className="mx-auto mb-2 text-vscode-descriptionForeground" size={32} />
+            <p className="text-sm text-vscode-descriptionForeground">No per-file streaks yet. Start focusing on a file to build streaks!</p>
+          </div>
         )}
       </section>
 
       {/* How it Works */}
-      <section className="bg-gray-50 rounded-lg p-6">
-        <h3 className="text-lg font-semibold text-gray-900 mb-3">
-          How Focus Streaks Work
-        </h3>
-        <div className="space-y-2 text-sm text-gray-600">
+      <section className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+        <div className="flex items-center gap-2 mb-3">
+          <Info className="text-brand-primary" size={20} strokeWidth={2} />
+          <h3 className="text-base font-semibold text-vscode-editor-fg">
+            How Focus Streaks Work
+          </h3>
+        </div>
+        <div className="space-y-3 text-sm text-vscode-foreground">
           <p>
-            <strong>Global Streak:</strong> Continuous coding activity across all files. 
+            <strong className="text-vscode-editor-fg">Global Streak:</strong> Continuous coding activity across all files. 
             Breaks after 10 minutes of inactivity.
           </p>
           <p>
-            <strong>Per-File Streak:</strong> Continuous focus on a single file. 
+            <strong className="text-vscode-editor-fg">Per-File Streak:</strong> Continuous focus on a single file. 
             Tolerates micro-switches up to 30 seconds.
           </p>
-          <p className="text-xs text-gray-500 mt-4">
-            💡 Tip: File paths are hashed for privacy. Only language and duration are tracked.
+          <p className="text-xs text-vscode-descriptionForeground pt-2 border-t border-vscode-panel-border">
+            File paths are hashed for privacy. Only language and duration are tracked.
           </p>
         </div>
       </section>
