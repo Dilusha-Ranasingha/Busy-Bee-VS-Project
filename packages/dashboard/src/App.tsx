@@ -3,68 +3,50 @@ import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
 import { FileSwitchRatePage } from './pages/Metrics-Tracking/FileSwitchRate';
+import { SideNav } from './components/Layout';
 
 type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch';
+
+const NAV_ITEMS = [
+  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
+  { id: 'add', label: 'Add Product', icon: '➕' },
+  { id: 'list', label: 'Product List', icon: '📋' },
+  { id: 'fileswitch', label: 'File Switch', icon: '🔀' },
+];
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');
 
   return (
-    <div className="min-h-screen bg-vscode-editor-bg">
-      <header className="border-b border-vscode-panel-border bg-vscode-widget-bg/80 backdrop-blur sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight text-vscode-editor-fg">Products</h1>
-          <nav className="inline-flex rounded-lg shadow-vscode ring-1 ring-vscode-widget-border overflow-hidden">
-            <button
-              onClick={() => setTab('dashboard')}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus ${
-                tab === 'dashboard'
-                  ? 'bg-brand-primary text-white'
-                  : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg'
-              }`}
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => setTab('add')}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus border-l border-vscode-widget-border ${
-                tab === 'add'
-                  ? 'bg-brand-primary text-white'
-                  : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg'
-              }`}
-            >
-              Add
-            </button>
-            <button
-              onClick={() => setTab('list')}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus border-l border-vscode-widget-border ${
-                tab === 'list'
-                  ? 'bg-brand-primary text-white'
-                  : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg'
-              }`}
-            >
-              List
-            </button>
-            <button
-              onClick={() => setTab('fileswitch')}
-              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus border-l border-vscode-widget-border ${
-                tab === 'fileswitch'
-                  ? 'bg-brand-primary text-white'
-                  : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg'
-              }`}
-            >
-              File Switch
-            </button>
-          </nav>
-        </div>
-      </header>
+    <div className="flex h-screen w-full overflow-hidden bg-vscode-editor-bg">
+      {/* Side Navigation */}
+      <SideNav
+        items={NAV_ITEMS}
+        activeId={tab}
+        onSelect={(id) => setTab(id as Tab)}
+      />
 
-      <main className="container mx-auto px-4 py-8">
-        {tab === 'dashboard' && <DashboardPage />}
-        {tab === 'add' && <AddProductPage />}
-        {tab === 'list' && <ProductListPage />}
-        {tab === 'fileswitch' && <FileSwitchRatePage />}
-      </main>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Header */}
+        <header className="flex-shrink-0 border-b border-vscode-panel-border bg-vscode-widget-bg/80 backdrop-blur">
+          <div className="px-4 py-3 flex items-center">
+            <h1 className="text-lg font-semibold text-vscode-editor-fg">
+              {NAV_ITEMS.find((item) => item.id === tab)?.label || 'Dashboard'}
+            </h1>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto">
+          <div className="p-4">
+            {tab === 'dashboard' && <DashboardPage />}
+            {tab === 'add' && <AddProductPage />}
+            {tab === 'list' && <ProductListPage />}
+            {tab === 'fileswitch' && <FileSwitchRatePage />}
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

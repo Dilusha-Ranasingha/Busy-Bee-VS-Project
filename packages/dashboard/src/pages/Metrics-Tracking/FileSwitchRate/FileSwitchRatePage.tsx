@@ -105,8 +105,8 @@ export default function FileSwitchRatePage() {
   }, [windows]);
 
   return (
-    <div className="grid grid-cols-[320px_1fr] gap-4 p-4">
-      {/* LEFT: sessions list */}
+    <div className="space-y-4">
+      {/* Sessions selector */}
       <div className="border border-vscode-panel-border rounded-xl p-3 bg-vscode-widget-bg">
         <h2 className="m-0 mb-2 text-base font-semibold text-vscode-editor-fg">File Switching Rate</h2>
 
@@ -151,14 +151,14 @@ export default function FileSwitchRatePage() {
         )}
       </div>
 
-      {/* RIGHT: session detail */}
+      {/* Session detail */}
       <div className="border border-vscode-panel-border rounded-xl p-3 bg-vscode-widget-bg">
-        <div className="flex items-baseline justify-between gap-3 flex-wrap">
+        <div className="space-y-3">
           <div>
             <h3 className="m-0 text-base font-semibold text-vscode-editor-fg">Session Detail</h3>
             <div className="text-xs opacity-80 mt-1 text-vscode-foreground">
               {selectedSessionId ? (
-                <>Session ID: <span className="font-mono">{selectedSessionId}</span></>
+                <>Session ID: <span className="font-mono text-[10px]">{selectedSessionId}</span></>
               ) : (
                 <>Select a session</>
               )}
@@ -166,7 +166,7 @@ export default function FileSwitchRatePage() {
           </div>
 
           {computed && (
-            <div className="flex gap-3 flex-wrap justify-end">
+            <div className="grid grid-cols-2 gap-2">
               <Stat label="Total activations" value={String(computed.totalActivations)} />
               <Stat label="Avg rate/min" value={computed.avgRate.toFixed(2)} />
               <Stat label="Start" value={fmtTime(computed.start)} />
@@ -192,20 +192,21 @@ export default function FileSwitchRatePage() {
                 <thead>
                   <tr>
                     <Th>Window</Th>
-                    <Th align="right">Activation count</Th>
-                    <Th align="right">Rate / min</Th>
-                    <Th>Workspace tag</Th>
+                    <Th align="right">Count</Th>
+                    <Th align="right">Rate</Th>
+                    <Th>Workspace</Th>
                   </tr>
                 </thead>
                 <tbody>
                   {windows.map((w) => (
                     <tr key={w.id}>
                       <Td>
-                        {fmtTime(w.window_start)} - {fmtTime(w.window_end)}
+                        <div className="text-xs">{fmtTime(w.window_start)}</div>
+                        <div className="text-xs opacity-60">{fmtTime(w.window_end)}</div>
                       </Td>
                       <Td align="right">{w.activation_count}</Td>
                       <Td align="right">{Number(w.rate_per_min).toFixed(2)}</Td>
-                      <Td className="font-mono text-xs">
+                      <Td className="font-mono text-[10px]">
                         {w.workspace_tag ?? "-"}
                       </Td>
                     </tr>
