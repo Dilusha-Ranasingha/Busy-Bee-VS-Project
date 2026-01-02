@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame } from 'lucide-react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
@@ -10,11 +11,11 @@ import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak';
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', icon: '📊' },
-  { id: 'add', label: 'Add Product', icon: '➕' },
-  { id: 'list', label: 'Product List', icon: '📋' },
-  { id: 'fileswitch', label: 'File Switch', icon: '🔀' },
-  { id: 'focusstreak', label: 'Focus Streaks', icon: '🔥' },
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { id: 'add', label: 'Add Product', icon: PlusCircle },
+  { id: 'list', label: 'Product List', icon: Package },
+  { id: 'fileswitch', label: 'File Switch', icon: ArrowLeftRight },
+  { id: 'focusstreak', label: 'Focus Streaks', icon: Flame },
 ];
 
 export default function App() {
