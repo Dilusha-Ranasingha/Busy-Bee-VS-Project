@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { getFileSwitchSessions, getFileSwitchWindows } from "../../../services/Metrics-Tracking/fileSwitch.service";
 import type { FileSwitchSessionSummary, FileSwitchWindow } from "../../../types/Metrics-Tracking/fileSwitch.types";
+import { useAuth } from "../../../contexts/AuthContext";
+import { SignInPrompt } from "../../../components/Auth/GitHubAuth";
 
 function formatDateInput(d: Date) {
   const yyyy = d.getFullYear();
@@ -20,6 +22,7 @@ function fmtDateTime(iso: string) {
 }
 
 export default function FileSwitchRatePage() {
+  const { user, isLoading: authLoading } = useAuth();
   const [date, setDate] = useState(() => formatDateInput(new Date()));
   const [sessions, setSessions] = useState<FileSwitchSessionSummary[]>([]);
   const [selectedSessionId, setSelectedSessionId] = useState<string>("");
@@ -30,6 +33,8 @@ export default function FileSwitchRatePage() {
 
   // Load sessions for date
   useEffect(() => {
+    if (!user) return; // Don't load if not authenticated
+    
     let cancelled = false;
     setLoadingSessions(true);
     setError("");
@@ -37,7 +42,7 @@ export default function FileSwitchRatePage() {
     setSelectedSessionId("");
     setWindows([]);
 
-    getFileSwitchSessions(date)
+    getFileSwitchSessions(date, user.id)
       .then((data) => {
         if (cancelled) return;
         setSessions(data);
@@ -57,17 +62,18 @@ export default function FileSwitchRatePage() {
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [date, user]);
 
   // Load windows when session changes
   useEffect(() => {
-    if (!selectedSessionId) return;
+    if (!selectedSessionId || !user) return;
+    
     let cancelled = false;
     setLoadingWindows(true);
     setError("");
     setWindows([]);
 
-    getFileSwitchWindows(selectedSessionId)
+    getFileSwitchWindows(selectedSessionId, user.id)
       .then((data) => {
         if (cancelled) return;
         setWindows(data);
@@ -84,7 +90,20 @@ export default function FileSwitchRatePage() {
     return () => {
       cancelled = true;
     };
-  }, [selectedSessionId]);
+  }, [selectedSessionId, user]);
+
+  // Show sign-in prompt if not authenticated
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-vscode-descriptionForeground">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <SignInPrompt />;
+  }
 
   const computed = useMemo(() => {
     if (windows.length === 0) return null;
@@ -183,7 +202,7 @@ export default function FileSwitchRatePage() {
 
         <div className="mt-3">
           {loadingWindows ? (
-            <div className="text-sm opacity-80 text-vscode-foreground">Loading 5-min windows…</div>
+            <div className="text-sm opacity-80 text-vscode-foreground">Loading windows…</div>
           ) : windows.length === 0 ? (
             <div className="text-sm opacity-80 text-vscode-foreground">No window data for this session.</div>
           ) : (
@@ -225,7 +244,7 @@ export default function FileSwitchRatePage() {
   );
 }
 
-// This Stat component shows a label and value in a styled box,
+// Stat component shows a label and value in a styled box
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="border border-vscode-panel-border rounded-xl px-2.5 py-2 min-w-[120px] bg-vscode-editor-bg">
@@ -234,7 +253,8 @@ function Stat({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-// This Th component is a styled table header cell
+
+// Th component is a styled table header cell
 function Th({ children, align }: { children: React.ReactNode; align?: "left" | "right" }) {
   return (
     <th
@@ -246,7 +266,8 @@ function Th({ children, align }: { children: React.ReactNode; align?: "left" | "
     </th>
   );
 }
-// This Td component is a styled table data cell
+
+// Td component is a styled table data cell
 function Td({ children, align, className }: { children: React.ReactNode; align?: "left" | "right"; className?: string }) {
   return (
     <td

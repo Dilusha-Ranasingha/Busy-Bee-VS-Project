@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import axios from 'axios';
 
 export interface GitHubUser {
   id: string;
@@ -33,17 +34,23 @@ export class AuthManager {
       console.log('[AuthManager] Initiating GitHub sign-in...');
 
       // Request GitHub authentication with required scopes
+      console.log('[AuthManager] Requesting GitHub session...');
       this.session = await vscode.authentication.getSession('github', ['user:email'], {
         createIfNone: true, // Show sign-in UI if not already signed in
       });
+
+      console.log('[AuthManager] Session result:', this.session ? 'received' : 'null');
 
       if (!this.session) {
         console.log('[AuthManager] Sign-in cancelled by user');
         return undefined;
       }
 
+      console.log('[AuthManager] Fetching user info from GitHub API...');
       // Fetch user info from GitHub API
       this.user = await this.fetchUserInfo(this.session.accessToken);
+
+      console.log('[AuthManager] User info received:', this.user.username);
 
       // Store session for persistence
       await this.context.globalState.update('github_session', {
@@ -61,7 +68,10 @@ export class AuthManager {
       return this.user;
     } catch (error) {
       console.error('[AuthManager] Sign-in failed:', error);
-      vscode.window.showErrorMessage('GitHub sign-in failed');
+      if (error instanceof Error) {
+        console.error('[AuthManager] Error details:', error.message, error.stack);
+      }
+      vscode.window.showErrorMessage(`GitHub sign-in failed: ${error}`);
       return undefined;
     }
   }
@@ -151,25 +161,26 @@ export class AuthManager {
    * Fetch user info from GitHub API
    */
   private async fetchUserInfo(accessToken: string): Promise<GitHubUser> {
-    const response = await fetch('https://api.github.com/user', {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/vnd.github.v3+json',
-      },
-    });
+    try {
+      const response = await axios.get('https://api.github.com/user', {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`GitHub API error: ${response.status}`);
+      const data = response.data;
+
+      return {
+        id: String(data.id),
+        username: data.login,
+        email: data.email || `${data.login}@users.noreply.github.com`,
+        avatarUrl: data.avatar_url,
+      };
+    } catch (error) {
+      console.error('[AuthManager] Failed to fetch user info:', error);
+      throw new Error('Failed to fetch GitHub user information');
     }
-
-    const data = await response.json();
-
-    return {
-      id: String(data.id),
-      username: data.login,
-      email: data.email || `${data.login}@users.noreply.github.com`,
-      avatarUrl: data.avatar_url,
-    };
   }
 
   /**

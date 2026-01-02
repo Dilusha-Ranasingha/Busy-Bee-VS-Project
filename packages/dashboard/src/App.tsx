@@ -4,6 +4,7 @@ import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
 import { FileSwitchRatePage } from './pages/Metrics-Tracking/FileSwitchRate';
 import { SideNav } from './components/Layout';
+import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
 type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch';
 
@@ -30,10 +31,11 @@ export default function App() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="flex-shrink-0 border-b border-vscode-panel-border bg-vscode-widget-bg/80 backdrop-blur">
-          <div className="px-4 py-3 flex items-center">
+          <div className="px-4 py-3 flex items-center justify-between">
             <h1 className="text-lg font-semibold text-vscode-editor-fg">
               {NAV_ITEMS.find((item) => item.id === tab)?.label || 'Dashboard'}
             </h1>
+            <GitHubAuthButton />
           </div>
         </header>
 

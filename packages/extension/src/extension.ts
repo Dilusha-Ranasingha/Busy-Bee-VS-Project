@@ -54,7 +54,7 @@ export function activate(context: vscode.ExtensionContext) {
 	}
 
 	// Register the Product Dashboard webview
-	const dashboardProvider = new ProductDashboardViewProvider(context.extensionUri);
+	const dashboardProvider = new ProductDashboardViewProvider(context.extensionUri, authManager);
 	
 	context.subscriptions.push(
 		vscode.window.registerWebviewViewProvider(
@@ -76,9 +76,17 @@ export function activate(context: vscode.ExtensionContext) {
 
 	// GitHub Sign In Command
 	const signInCommand = vscode.commands.registerCommand('busy-bee-vs.signIn', async () => {
-		const user = await authManager.signIn();
-		if (user) {
-			vscode.window.showInformationMessage(`Welcome ${user.username}! File tracking started.`);
+		try {
+			console.log('[Extension] Sign in command triggered');
+			const user = await authManager.signIn();
+			if (user) {
+				vscode.window.showInformationMessage(`Welcome ${user.username}! File tracking started.`);
+			} else {
+				console.log('[Extension] Sign in returned undefined');
+			}
+		} catch (error) {
+			console.error('[Extension] Sign in command error:', error);
+			vscode.window.showErrorMessage(`Sign in failed: ${error}`);
 		}
 	});
 

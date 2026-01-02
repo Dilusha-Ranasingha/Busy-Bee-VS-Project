@@ -3,16 +3,22 @@ import type { FileSwitchSessionSummary, FileSwitchWindow } from '../../types/Met
 
 type ApiResponse<T> = { ok: boolean; data: T };
 
-export async function getFileSwitchSessions(date: string) {
+export async function getFileSwitchSessions(date: string, userId?: string) {
+  const params = new URLSearchParams({ date });
+  if (userId) params.append('userId', userId);
+  
   const res = await apiClient.get<ApiResponse<FileSwitchSessionSummary[]>>(
-    `/api/file-switch/sessions?date=${encodeURIComponent(date)}`
+    `/api/file-switch/sessions?${params.toString()}`
   );
   return res.data;
 }
 
-export async function getFileSwitchWindows(sessionId: string) {
+export async function getFileSwitchWindows(sessionId: string, userId?: string) {
+  const params = new URLSearchParams({ sessionId });
+  if (userId) params.append('userId', userId);
+  
   const res = await apiClient.get<ApiResponse<FileSwitchWindow[]>>(
-    `/api/file-switch/windows?sessionId=${encodeURIComponent(sessionId)}`
+    `/api/file-switch/windows?${params.toString()}`
   );
   return res.data;
 }
