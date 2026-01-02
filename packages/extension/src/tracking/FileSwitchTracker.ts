@@ -11,10 +11,11 @@ export class FileSwitchTracker {
   private activationCount = 0;
   private windowStart: Date;
   private sessionId: string;
-  private windowIntervalMinutes = 5;
-  private intervalTimer?: NodeJS.Timeout;
+  private idleTimeoutMinutes = 10; // Session ends after 10 minutes of inactivity
+  private idleTimer?: NodeJS.Timeout;
   private lastActiveFile?: string;
   private apiBaseUrl: string;
+  private isSessionActive = false; // Track if session is currently active
 
   constructor(
     private context: vscode.ExtensionContext,
@@ -24,7 +25,7 @@ export class FileSwitchTracker {
     this.sessionId = this.generateSessionId();
     this.windowStart = new Date();
     
-    console.log(`[FileSwitchTracker] Started tracking session: ${this.sessionId}`);
+    console.log(`[FileSwitchTracker] Initialized tracker`);
   }
 
   public start() {
@@ -33,7 +34,9 @@ export class FileSwitchTracker {
     if (activeEditor) {
       this.lastActiveFile = activeEditor.document.uri.toString();
       this.activationCount = 1; // First activation
-      console.log(`[FileSwitchTracker] Initial file: ${this.lastActiveFile}`);
+      this.isSessionActive = true;
+      this.startIdleTimer();
+      console.log(`[FileSwitchTracker] Session started with initial file: ${this.lastActiveFile}`);
     }
 
     // Listen for active editor changes (file switches)
@@ -46,46 +49,88 @@ export class FileSwitchTracker {
       })
     );
 
-    // Set up interval timer to send data every N minutes
-    this.intervalTimer = setInterval(() => {
-      this.flushWindow();
-    }, this.windowIntervalMinutes * 60 * 1000);
-
-    console.log(`[FileSwitchTracker] Tracking active. Interval: ${this.windowIntervalMinutes} min`);
+    console.log(`[FileSwitchTracker] Tracker ready. Sessions start on first file switch (10 min idle timeout)`);
   }
 
   public stop() {
-    // Flush any remaining data
-    this.flushWindow();
+    // Flush any remaining data if session is active
+    if (this.isSessionActive && this.activationCount > 0) {
+      this.flushWindow();
+    }
     
-    // Clear interval
-    if (this.intervalTimer) {
-      clearInterval(this.intervalTimer);
-      this.intervalTimer = undefined;
+    // Clear idle timer
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+      this.idleTimer = undefined;
     }
 
-    console.log(`[FileSwitchTracker] Stopped tracking session: ${this.sessionId}`);
+    console.log(`[FileSwitchTracker] Tracker stopped`);
   }
 
   private onFileActivation(fileUri: string) {
+    // If session was inactive, start a new session
+    if (!this.isSessionActive) {
+      this.startNewSession();
+    }
+
     // Count every activation, even if returning to the same file
     // A → B → A counts as 3 activations
     this.activationCount++;
     
-    console.log(`[FileSwitchTracker] File activated: ${fileUri} (count: ${this.activationCount})`);
+    console.log(`[FileSwitchTracker] File activated: ${fileUri} (count: ${this.activationCount}, session: ${this.sessionId})`);
     
     this.lastActiveFile = fileUri;
+
+    // Reset idle timer - user is active
+    this.resetIdleTimer();
+  }
+
+  private startNewSession() {
+    this.sessionId = this.generateSessionId();
+    this.windowStart = new Date();
+    this.activationCount = 0;
+    this.isSessionActive = true;
+    console.log(`[FileSwitchTracker] New session started: ${this.sessionId}`);
+  }
+
+  private startIdleTimer() {
+    this.idleTimer = setTimeout(() => {
+      this.onIdleTimeout();
+    }, this.idleTimeoutMinutes * 60 * 1000);
+  }
+
+  private resetIdleTimer() {
+    // Clear existing timer
+    if (this.idleTimer) {
+      clearTimeout(this.idleTimer);
+    }
+    // Start new timer
+    this.startIdleTimer();
+  }
+
+  private onIdleTimeout() {
+    console.log(`[FileSwitchTracker] Idle timeout reached (${this.idleTimeoutMinutes} min). Ending session.`);
+    
+    // Flush data if there were any activations
+    if (this.activationCount > 0) {
+      this.flushWindow();
+    }
+
+    // Mark session as inactive
+    this.isSessionActive = false;
+    console.log(`[FileSwitchTracker] Session ${this.sessionId} ended due to inactivity`);
   }
 
   private async flushWindow() {
     if (this.activationCount === 0) {
-      console.log('[FileSwitchTracker] No activations in this window, skipping flush');
+      console.log('[FileSwitchTracker] No activations in this session, skipping flush');
       return;
     }
 
     const windowEnd = new Date();
-    const windowDurationMinutes = this.windowIntervalMinutes;
-    const ratePerMin = this.activationCount / windowDurationMinutes;
+    const sessionDurationMs = windowEnd.getTime() - this.windowStart.getTime();
+    const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
+    const ratePerMin = sessionDurationMinutes > 0 ? this.activationCount / sessionDurationMinutes : 0;
 
     const payload = {
       sessionId: this.sessionId,
@@ -96,7 +141,7 @@ export class FileSwitchTracker {
       workspaceTag: this.getWorkspaceTag(),
     };
 
-    console.log('[FileSwitchTracker] Flushing window:', payload);
+    console.log('[FileSwitchTracker] Flushing session data:', payload);
 
     try {
       const response = await axios.post(
@@ -108,20 +153,23 @@ export class FileSwitchTracker {
         }
       );
 
-      console.log('[FileSwitchTracker] Successfully saved window:', response.data);
+      console.log('[FileSwitchTracker] Successfully saved session:', response.data);
       
-      // Show notification (optional, can be disabled)
+      // Show notification
+      const durationStr = sessionDurationMinutes < 1 
+        ? `${Math.round(sessionDurationMinutes * 60)}s`
+        : `${sessionDurationMinutes.toFixed(1)} min`;
+      
       vscode.window.showInformationMessage(
-        `File Switch: ${this.activationCount} activations in ${this.windowIntervalMinutes} min (rate: ${ratePerMin.toFixed(2)}/min)`
+        `Session ended: ${this.activationCount} file switches in ${durationStr} (rate: ${ratePerMin.toFixed(2)}/min)`
       );
     } catch (error) {
-      console.error('[FileSwitchTracker] Failed to save window:', error);
+      console.error('[FileSwitchTracker] Failed to save session:', error);
       vscode.window.showErrorMessage('Failed to save file switch data');
     }
 
-    // Reset for next window
+    // Reset counters (but keep session ID until next session starts)
     this.activationCount = 0;
-    this.windowStart = new Date();
   }
 
   private generateSessionId(): string {
