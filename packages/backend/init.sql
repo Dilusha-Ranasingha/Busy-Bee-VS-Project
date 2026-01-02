@@ -44,3 +44,29 @@ CREATE INDEX IF NOT EXISTS idx_file_switch_windows_created_at
 
 CREATE INDEX IF NOT EXISTS idx_file_switch_windows_user_id
   ON file_switch_windows (user_id, created_at DESC);
+
+-- Focus Streaks table
+CREATE TABLE IF NOT EXISTS focus_streaks (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  workspace_id TEXT,
+  session_id TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('global', 'per_file')),
+  
+  -- Per-file specific fields (nullable for global streaks)
+  file_hash TEXT,
+  language TEXT,
+  
+  -- Timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  duration_min NUMERIC NOT NULL,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_focus_streaks_user_type ON focus_streaks(user_id, type, duration_min DESC);
+CREATE INDEX IF NOT EXISTS idx_focus_streaks_user_language ON focus_streaks(user_id, language, duration_min DESC);
+CREATE INDEX IF NOT EXISTS idx_focus_streaks_start ON focus_streaks(start_ts DESC);
+

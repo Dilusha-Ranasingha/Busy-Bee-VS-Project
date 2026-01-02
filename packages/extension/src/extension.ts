@@ -3,10 +3,12 @@
 import * as vscode from 'vscode';
 import { ProductDashboardViewProvider } from './webview/ProductDashboardViewProvider';
 import { FileSwitchTracker } from './tracking/FileSwitchTracker';
+import { FocusStreakTracker } from './tracking/FocusStreakTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
 let fileSwitchTracker: FileSwitchTracker | undefined;
+let focusStreakTracker: FocusStreakTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -25,19 +27,32 @@ export function activate(context: vscode.ExtensionContext) {
 		authManager.onAuthChange((user) => {
 			if (user) {
 				console.log(`[Extension] User signed in: ${user.username}`);
-				// Restart tracker with authenticated user
+				
+				// Restart File Switch tracker with authenticated user
 				if (fileSwitchTracker) {
 					fileSwitchTracker.stop();
 				}
 				const apiBaseUrl = 'http://localhost:4000';
 				fileSwitchTracker = new FileSwitchTracker(context, authManager, apiBaseUrl);
 				fileSwitchTracker.start();
+				
+				// Start Focus Streak tracker
+				if (focusStreakTracker) {
+					focusStreakTracker.dispose();
+				}
+				focusStreakTracker = new FocusStreakTracker(authManager);
+				console.log('Focus Streak Tracker started');
 			} else {
 				console.log('[Extension] User signed out');
+				
 				// Stop tracking when signed out
 				if (fileSwitchTracker) {
 					fileSwitchTracker.stop();
 					fileSwitchTracker = undefined;
+				}
+				if (focusStreakTracker) {
+					focusStreakTracker.dispose();
+					focusStreakTracker = undefined;
 				}
 			}
 		})
@@ -49,6 +64,10 @@ export function activate(context: vscode.ExtensionContext) {
 		fileSwitchTracker = new FileSwitchTracker(context, authManager, apiBaseUrl);
 		fileSwitchTracker.start();
 		console.log('File Switch Tracker started (user already authenticated)');
+		
+		// Start Focus Streak tracker
+		focusStreakTracker = new FocusStreakTracker(authManager);
+		console.log('Focus Streak Tracker started (user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
@@ -123,5 +142,9 @@ export function deactivate() {
 	if (fileSwitchTracker) {
 		fileSwitchTracker.stop();
 		console.log('File Switch Tracker stopped');
+	}
+	if (focusStreakTracker) {
+		focusStreakTracker.dispose();
+		console.log('Focus Streak Tracker stopped');
 	}
 }

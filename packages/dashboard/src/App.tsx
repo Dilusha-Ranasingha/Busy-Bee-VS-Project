@@ -3,16 +3,18 @@ import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
 import { FileSwitchRatePage } from './pages/Metrics-Tracking/FileSwitchRate';
+import { FocusStreakPage } from './pages/Metrics-Tracking/FocusStreak';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: '📊' },
   { id: 'add', label: 'Add Product', icon: '➕' },
   { id: 'list', label: 'Product List', icon: '📋' },
   { id: 'fileswitch', label: 'File Switch', icon: '🔀' },
+  { id: 'focusstreak', label: 'Focus Streaks', icon: '🔥' },
 ];
 
 export default function App() {
@@ -46,6 +48,7 @@ export default function App() {
             {tab === 'add' && <AddProductPage />}
             {tab === 'list' && <ProductListPage />}
             {tab === 'fileswitch' && <FileSwitchRatePage />}
+            {tab === 'focusstreak' && <FocusStreakPage />}
           </div>
         </main>
       </div>
