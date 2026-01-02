@@ -20,6 +20,7 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS file_switch_windows (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
+  user_id TEXT NOT NULL,                -- GitHub user ID
   session_id TEXT NOT NULL,
   window_start TIMESTAMPTZ NOT NULL,
   window_end   TIMESTAMPTZ NOT NULL,
@@ -40,3 +41,6 @@ CREATE INDEX IF NOT EXISTS idx_file_switch_windows_session
 
 CREATE INDEX IF NOT EXISTS idx_file_switch_windows_created_at
   ON file_switch_windows (created_at);
+
+CREATE INDEX IF NOT EXISTS idx_file_switch_windows_user_id
+  ON file_switch_windows (user_id, created_at DESC);

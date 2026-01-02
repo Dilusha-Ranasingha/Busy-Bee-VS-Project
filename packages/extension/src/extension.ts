@@ -3,9 +3,11 @@
 import * as vscode from 'vscode';
 import { ProductDashboardViewProvider } from './webview/ProductDashboardViewProvider';
 import { FileSwitchTracker } from './tracking/FileSwitchTracker';
+import { AuthManager } from './auth/AuthManager';
 
-// Global tracker instance
+// Global instances
 let fileSwitchTracker: FileSwitchTracker | undefined;
+let authManager: AuthManager;
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -15,11 +17,41 @@ export function activate(context: vscode.ExtensionContext) {
 	// This line of code will only be executed once when your extension is activated
 	console.log('Congratulations, your extension "busy-bee-vs" is now active!');
 
-	// Initialize File Switch Tracker
-	const apiBaseUrl = 'http://localhost:4000'; // TODO: Make this configurable
-	fileSwitchTracker = new FileSwitchTracker(context, apiBaseUrl);
-	fileSwitchTracker.start();
-	console.log('File Switch Tracker started');
+	// Initialize Authentication Manager
+	authManager = AuthManager.getInstance(context);
+	
+	// Listen for auth state changes
+	context.subscriptions.push(
+		authManager.onAuthChange((user) => {
+			if (user) {
+				console.log(`[Extension] User signed in: ${user.username}`);
+				// Restart tracker with authenticated user
+				if (fileSwitchTracker) {
+					fileSwitchTracker.stop();
+				}
+				const apiBaseUrl = 'http://localhost:4000';
+				fileSwitchTracker = new FileSwitchTracker(context, authManager, apiBaseUrl);
+				fileSwitchTracker.start();
+			} else {
+				console.log('[Extension] User signed out');
+				// Stop tracking when signed out
+				if (fileSwitchTracker) {
+					fileSwitchTracker.stop();
+					fileSwitchTracker = undefined;
+				}
+			}
+		})
+	);
+
+	// Initialize File Switch Tracker if user is already signed in
+	if (authManager.isSignedIn()) {
+		const apiBaseUrl = 'http://localhost:4000';
+		fileSwitchTracker = new FileSwitchTracker(context, authManager, apiBaseUrl);
+		fileSwitchTracker.start();
+		console.log('File Switch Tracker started (user already authenticated)');
+	} else {
+		console.log('User not authenticated. Sign in to start tracking.');
+	}
 
 	// Register the Product Dashboard webview
 	const dashboardProvider = new ProductDashboardViewProvider(context.extensionUri);
@@ -42,12 +74,35 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(disposable);
 
+	// GitHub Sign In Command
+	const signInCommand = vscode.commands.registerCommand('busy-bee-vs.signIn', async () => {
+		const user = await authManager.signIn();
+		if (user) {
+			vscode.window.showInformationMessage(`Welcome ${user.username}! File tracking started.`);
+		}
+	});
+
+	context.subscriptions.push(signInCommand);
+
+	// GitHub Sign Out Command
+	const signOutCommand = vscode.commands.registerCommand('busy-bee-vs.signOut', async () => {
+		await authManager.signOut();
+	});
+
+	context.subscriptions.push(signOutCommand);
+
 	// Optional: Command to show current tracking stats
 	const showStatsCommand = vscode.commands.registerCommand('busy-bee-vs.showFileSwitchStats', () => {
+		const user = authManager.getUser();
+		if (!user) {
+			vscode.window.showInformationMessage('Sign in with GitHub to view stats');
+			return;
+		}
+		
 		if (fileSwitchTracker) {
 			const stats = fileSwitchTracker.getCurrentStats();
 			vscode.window.showInformationMessage(
-				`File Switch Stats: ${stats.activationCount} activations in current window. Session: ${stats.sessionId}`
+				`[${user.username}] File Switch Stats: ${stats.activationCount} activations in current session`
 			);
 		}
 	});

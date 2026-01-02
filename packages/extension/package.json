@@ -18,8 +18,16 @@
         "title": "Hello World"
       },
       {
+        "command": "busy-bee-vs.signIn",
+        "title": "Busy Bee: Sign in with GitHub"
+      },
+      {
+        "command": "busy-bee-vs.signOut",
+        "title": "Busy Bee: Sign out"
+      },
+      {
         "command": "busy-bee-vs.showFileSwitchStats",
-        "title": "Show File Switch Stats"
+        "title": "Busy Bee: Show File Switch Stats"
       }
     ],
     "viewsContainers": {

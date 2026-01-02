@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import axios from 'axios';
+import { AuthManager } from '../auth/AuthManager';
 
 interface WindowData {
   windowStart: Date;
@@ -16,11 +17,14 @@ export class FileSwitchTracker {
   private lastActiveFile?: string;
   private apiBaseUrl: string;
   private isSessionActive = false; // Track if session is currently active
+  private authManager: AuthManager;
 
   constructor(
     private context: vscode.ExtensionContext,
+    authManager: AuthManager,
     apiBaseUrl?: string
   ) {
+    this.authManager = authManager;
     this.apiBaseUrl = apiBaseUrl || 'http://localhost:4000';
     this.sessionId = this.generateSessionId();
     this.windowStart = new Date();
@@ -127,12 +131,22 @@ export class FileSwitchTracker {
       return;
     }
 
+    // Check if user is signed in
+    const userId = this.authManager.getUserId();
+    if (!userId) {
+      console.log('[FileSwitchTracker] User not signed in, skipping data upload');
+      vscode.window.showWarningMessage('Sign in with GitHub to track file switching metrics');
+      this.activationCount = 0; // Reset counter
+      return;
+    }
+
     const windowEnd = new Date();
     const sessionDurationMs = windowEnd.getTime() - this.windowStart.getTime();
     const sessionDurationMinutes = sessionDurationMs / (1000 * 60);
     const ratePerMin = sessionDurationMinutes > 0 ? this.activationCount / sessionDurationMinutes : 0;
 
     const payload = {
+      userId: userId,              // GitHub user ID
       sessionId: this.sessionId,
       windowStart: this.windowStart.toISOString(),
       windowEnd: windowEnd.toISOString(),

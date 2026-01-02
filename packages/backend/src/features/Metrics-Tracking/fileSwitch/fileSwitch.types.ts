@@ -1,4 +1,5 @@
 export type CreateFileSwitchWindowInput = {
+  userId: string;              // GitHub user ID
   sessionId: string;
   windowStart: string; // ISO string
   windowEnd: string;   // ISO string
@@ -9,6 +10,7 @@ export type CreateFileSwitchWindowInput = {
 
 export type FileSwitchWindowRow = {
   id: string;
+  user_id: string;             // GitHub user ID
   session_id: string;
   window_start: string;
   window_end: string;

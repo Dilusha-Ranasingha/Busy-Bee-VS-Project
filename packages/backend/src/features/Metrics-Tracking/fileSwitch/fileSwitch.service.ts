@@ -10,6 +10,7 @@ export function validateCreatePayload(payload: any): asserts payload is CreateFi
   if (!payload || typeof payload !== 'object') throw new Error('Invalid body');
 
   const {
+    userId,
     sessionId,
     windowStart,
     windowEnd,
@@ -18,6 +19,7 @@ export function validateCreatePayload(payload: any): asserts payload is CreateFi
     workspaceTag,
   } = payload;
 
+  if (!userId || typeof userId !== 'string') throw new Error('userId is required');
   if (!sessionId || typeof sessionId !== 'string') throw new Error('sessionId is required');
   if (!windowStart || typeof windowStart !== 'string' || !isValidIsoDate(windowStart)) throw new Error('windowStart must be ISO date string');
   if (!windowEnd || typeof windowEnd !== 'string' || !isValidIsoDate(windowEnd)) throw new Error('windowEnd must be ISO date string');
@@ -42,16 +44,17 @@ export function validateCreatePayload(payload: any): asserts payload is CreateFi
 export async function createFileSwitchWindow(input: CreateFileSwitchWindowInput) {
   const sql = `
     INSERT INTO file_switch_windows (
-      session_id, window_start, window_end,
+      user_id, session_id, window_start, window_end,
       activation_count, rate_per_min, workspace_tag
     )
-    VALUES ($1, $2, $3, $4, $5, $6)
+    VALUES ($1, $2, $3, $4, $5, $6, $7)
     RETURNING
-      id, session_id, window_start, window_end,
+      id, user_id, session_id, window_start, window_end,
       activation_count, rate_per_min, workspace_tag, created_at
   `;
 
   const params = [
+    input.userId,
     input.sessionId,
     input.windowStart,
     input.windowEnd,
@@ -64,16 +67,27 @@ export async function createFileSwitchWindow(input: CreateFileSwitchWindowInput)
   return result.rows[0];
 }
 
-export async function getWindowsBySession(sessionId: string) {
-  const sql = `
-    SELECT
-      id, session_id, window_start, window_end,
-      activation_count, rate_per_min, workspace_tag, created_at
-    FROM file_switch_windows
-    WHERE session_id = $1
-    ORDER BY window_start ASC
-  `;
-  const result = await query<FileSwitchWindowRow>(sql, [sessionId]);
+export async function getWindowsBySession(sessionId: string, userId?: string) {
+  const sql = userId
+    ? `
+      SELECT
+        id, user_id, session_id, window_start, window_end,
+        activation_count, rate_per_min, workspace_tag, created_at
+      FROM file_switch_windows
+      WHERE session_id = $1 AND user_id = $2
+      ORDER BY window_start ASC
+    `
+    : `
+      SELECT
+        id, user_id, session_id, window_start, window_end,
+        activation_count, rate_per_min, workspace_tag, created_at
+      FROM file_switch_windows
+      WHERE session_id = $1
+      ORDER BY window_start ASC
+    `;
+  
+  const params = userId ? [sessionId, userId] : [sessionId];
+  const result = await query<FileSwitchWindowRow>(sql, params);
   return result.rows;
 }
 
@@ -81,7 +95,7 @@ export async function getWindowsBySession(sessionId: string) {
  * Optional helper for dashboard: sessions recorded on a day (local day boundary is up to you).
  * This uses UTC date boundaries for simplicity.
  */
-export async function listSessionsByDate(dateYYYYMMDD: string) {
+export async function listSessionsByDate(dateYYYYMMDD: string, userId?: string) {
   // Basic format check
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateYYYYMMDD)) {
     throw new Error('date must be YYYY-MM-DD');
@@ -90,18 +104,33 @@ export async function listSessionsByDate(dateYYYYMMDD: string) {
   const start = `${dateYYYYMMDD}T00:00:00.000Z`;
   const end = `${dateYYYYMMDD}T23:59:59.999Z`;
 
-  const sql = `
-    SELECT
-      session_id,
-      MIN(window_start) AS session_start,
-      MAX(window_end)   AS session_end,
-      COUNT(*)          AS window_count
-    FROM file_switch_windows
-    WHERE window_start >= $1 AND window_start <= $2
-    GROUP BY session_id
-    ORDER BY MIN(window_start) DESC
-  `;
+  const sql = userId
+    ? `
+      SELECT
+        session_id,
+        user_id,
+        MIN(window_start) AS session_start,
+        MAX(window_end)   AS session_end,
+        COUNT(*)          AS window_count
+      FROM file_switch_windows
+      WHERE window_start >= $1 AND window_start <= $2 AND user_id = $3
+      GROUP BY session_id, user_id
+      ORDER BY MIN(window_start) DESC
+    `
+    : `
+      SELECT
+        session_id,
+        user_id,
+        MIN(window_start) AS session_start,
+        MAX(window_end)   AS session_end,
+        COUNT(*)          AS window_count
+      FROM file_switch_windows
+      WHERE window_start >= $1 AND window_start <= $2
+      GROUP BY session_id, user_id
+      ORDER BY MIN(window_start) DESC
+    `;
 
-  const result = await query(sql, [start, end]);
+  const params = userId ? [start, end, userId] : [start, end];
+  const result = await query(sql, params);
   return result.rows;
 }
