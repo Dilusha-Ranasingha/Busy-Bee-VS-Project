@@ -186,3 +186,30 @@ CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_user ON diagnostic_de
 CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_highest ON diagnostic_density_sessions(user_id, peak_density_per_kloc DESC);
 CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_session ON diagnostic_density_sessions(session_id);
 
+-- Error Fix Time Sessions (per-error tracking: appearance to resolution)
+CREATE TABLE IF NOT EXISTS error_fix_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  user_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  file_hash TEXT NOT NULL,
+  language TEXT,
+  
+  -- Error identity
+  error_key TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK (severity IN ('error', 'warning')),
+  
+  -- Session timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  duration_sec INT NOT NULL CHECK (duration_sec >= 60),
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for error fix queries
+CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_user ON error_fix_sessions(user_id, start_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_duration ON error_fix_sessions(user_id, duration_sec DESC);
+CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_severity ON error_fix_sessions(user_id, severity);
+

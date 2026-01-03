@@ -7,6 +7,7 @@ import { FocusStreakTracker } from './tracking/FocusStreakTracker';
 import { EditSessionTracker } from './tracking/EditSessionTracker';
 import { SaveEditSessionTracker } from './tracking/SaveEditSessionTracker';
 import { DiagnosticDensityTracker } from './tracking/DiagnosticDensityTracker';
+import { ErrorFixTimeTracker } from './tracking/ErrorFixTimeTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
@@ -15,6 +16,7 @@ let focusStreakTracker: FocusStreakTracker | undefined;
 let editSessionTracker: EditSessionTracker | undefined;
 let saveEditSessionTracker: SaveEditSessionTracker | undefined;
 let diagnosticDensityTracker: DiagnosticDensityTracker | undefined;
+let errorFixTimeTracker: ErrorFixTimeTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -71,6 +73,16 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.workspace.workspaceFolders?.[0]
 				);
 				console.log('Diagnostic Density Tracker started');
+				
+				// Start Error Fix Time tracker
+				if (errorFixTimeTracker) {
+					errorFixTimeTracker.dispose();
+				}
+				errorFixTimeTracker = new ErrorFixTimeTracker(
+					authManager,
+					vscode.workspace.workspaceFolders?.[0]
+				);
+				console.log('Error Fix Time Tracker started');
 			} else {
 				console.log('[Extension] User signed out');
 				
@@ -94,6 +106,10 @@ export function activate(context: vscode.ExtensionContext) {
 				if (diagnosticDensityTracker) {
 					diagnosticDensityTracker.dispose();
 					diagnosticDensityTracker = undefined;
+				}
+				if (errorFixTimeTracker) {
+					errorFixTimeTracker.dispose();
+					errorFixTimeTracker = undefined;
 				}
 			}
 		})
@@ -124,6 +140,13 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.workspace.workspaceFolders?.[0]
 		);
 		console.log('Diagnostic Density Tracker started (user already authenticated)');
+		
+		// Start Error Fix Time tracker
+		errorFixTimeTracker = new ErrorFixTimeTracker(
+			authManager,
+			vscode.workspace.workspaceFolders?.[0]
+		);
+		console.log('Error Fix Time Tracker started (user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
@@ -214,5 +237,9 @@ export function deactivate() {
 	if (diagnosticDensityTracker) {
 		diagnosticDensityTracker.dispose();
 		console.log('Diagnostic Density Tracker stopped');
+	}
+	if (errorFixTimeTracker) {
+		errorFixTimeTracker.dispose();
+		console.log('Error Fix Time Tracker stopped');
 	}
 }

@@ -9,6 +9,7 @@ import focusStreakRoutes from '../features/Metrics-Tracking/focusStreak/focusStr
 import editSessionsRoutes from '../features/Metrics-Tracking/editSessions/editSessions.routes.js';
 import saveEditSessionsRoutes from '../features/Metrics-Tracking/saveEditSessions/saveEditSessions.routes.js';
 import diagnosticDensityRoutes from '../features/Metrics-Tracking/diagnosticDensity/diagnosticDensity.routes.js';
+import errorFixTimeRoutes from '../features/Metrics-Tracking/errorFixTime/errorFixTime.routes.js';
 import authRoutes from '../features/auth/auth.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
@@ -26,6 +27,7 @@ app.use('/api/focus-streaks', focusStreakRoutes);
 app.use('/api/edit-sessions', editSessionsRoutes);
 app.use('/api/save-edit-sessions', saveEditSessionsRoutes);
 app.use('/api/diagnostic-density', diagnosticDensityRoutes);
+app.use('/api/error-fix-time', errorFixTimeRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);
