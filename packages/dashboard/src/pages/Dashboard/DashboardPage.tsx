@@ -9,8 +9,7 @@ import {
 } from 'chart.js';
 import { Pie, Doughnut } from 'react-chartjs-2';
 import { KpiCard, ChartCard, EmptyState, ChartSkeleton } from '../../components/charts/ChartComponents';
-// forecasting
-import ForecastWidget from '../../features/forecasting/ForecastWidget';
+
 
 // Register chart.js components once
 ChartJS.register(ArcElement, Tooltip, Legend, Title);
@@ -78,11 +77,6 @@ export default function DashboardPage() {
         <KpiCard title="Total Sold" value={totals.totalSold} />
         <KpiCard title="In Stock" value={totals.totalStockLeft} />
       </div>
-
-      {/* ForecastWidget sample */}
-    <div className="lg:col-span-3">
-      <ForecastWidget />
-    </div>
 
 
       {/* Charts */}
