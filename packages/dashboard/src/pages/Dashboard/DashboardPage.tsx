@@ -9,7 +9,7 @@ import {
 } from 'chart.js';
 import { Pie, Doughnut } from 'react-chartjs-2';
 import { KpiCard, ChartCard, EmptyState, ChartSkeleton } from '../../components/charts/ChartComponents';
-// Gamaya
+// forecasting
 import ForecastWidget from '../../features/forecasting/ForecastWidget';
 
 // Register chart.js components once
@@ -79,7 +79,7 @@ export default function DashboardPage() {
         <KpiCard title="In Stock" value={totals.totalStockLeft} />
       </div>
 
-      {/* Gamaya sample */}
+      {/* ForecastWidget sample */}
     <div className="lg:col-span-3">
       <ForecastWidget />
     </div>
