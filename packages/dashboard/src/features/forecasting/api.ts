@@ -1,4 +1,4 @@
-// src/features/forecasting/api.ts
+import { apiClient } from '../../services/api.client';
 
 export type ForecastPoint = {
   date: string;
@@ -15,24 +15,19 @@ export type ForecastResponse = {
   note?: string;
 };
 
-// Backend base URL
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || "http://localhost:4000";
+function hasData<T>(val: unknown): val is { data: T } {
+  return typeof val === 'object' && val !== null && 'data' in val;
+}
 
 /**
- * Fetch productive-minutes forecast for a user
+ * Backend route:
+ * GET /api/forecasting/:userId?days=7
  */
-export async function fetchProductiveMinutesForecast(
-  userId: string,
-  days: number = 7
-): Promise<ForecastResponse> {
-  const res = await fetch(
-    `${API_BASE}/api/forecasting/${encodeURIComponent(userId)}?days=${days}`
-  );
+export async function getForecast(userId: string, days: number = 7): Promise<ForecastResponse> {
+  const safeDays = Math.max(1, Math.min(7, days));
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch forecast");
-  }
+  const res = await apiClient.get<ForecastResponse>(`/api/forecasting/${userId}?days=${safeDays}`);
 
-  return res.json();
+  if (hasData<ForecastResponse>(res)) return res.data;
+  return res as unknown as ForecastResponse;
 }
