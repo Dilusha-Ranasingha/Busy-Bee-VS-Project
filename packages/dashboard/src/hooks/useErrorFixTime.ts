@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { errorFixTimeService, type ErrorFixStats } from '../services/errorFixTime.service';
+import { errorFixTimeService, type ErrorFixStats } from '../services/Metrics-Tracking/errorFixTime.service';
 
 export function useErrorFixTime(userId: string | undefined, severity?: 'error' | 'warning') {
   const [stats, setStats] = useState<ErrorFixStats | null>(null);
