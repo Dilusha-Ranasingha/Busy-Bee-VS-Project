@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save } from 'lucide-react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
 import { FileSwitchRatePage } from './pages/Metrics-Tracking/FileSwitchRate';
 import { FocusStreakPage } from './pages/Metrics-Tracking/FocusStreak';
 import { EditSessionsPage } from './pages/Metrics-Tracking/EditSessions';
+import { SaveEditRatioPage } from './pages/Metrics-Tracking/SaveEditRatio';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -18,6 +19,7 @@ const NAV_ITEMS = [
   { id: 'fileswitch', label: 'File Switch', icon: ArrowLeftRight },
   { id: 'focusstreak', label: 'Focus Streaks', icon: Flame },
   { id: 'editsessions', label: 'Edits/Min', icon: PenTool },
+  { id: 'saveedit', label: 'Save/Edit Ratio', icon: Save },
 ];
 
 export default function App() {
@@ -53,6 +55,7 @@ export default function App() {
             {tab === 'fileswitch' && <FileSwitchRatePage />}
             {tab === 'focusstreak' && <FocusStreakPage />}
             {tab === 'editsessions' && <EditSessionsPage />}
+            {tab === 'saveedit' && <SaveEditRatioPage />}
           </div>
         </main>
       </div>

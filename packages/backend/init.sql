@@ -108,3 +108,48 @@ CREATE INDEX IF NOT EXISTS idx_sessions_edits_user_edits ON sessions_edits(user_
 CREATE INDEX IF NOT EXISTS idx_sessions_edits_start ON sessions_edits(start_ts DESC);
 CREATE INDEX IF NOT EXISTS idx_sessions_edits_session ON sessions_edits(session_id);
 
+-- Save-to-Edit Ratio Sessions table
+CREATE TABLE IF NOT EXISTS save_edit_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  -- Session timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  duration_min NUMERIC NOT NULL,
+  
+  -- Edit counts
+  edits_total INT NOT NULL,
+  
+  -- Raw save counts
+  saves_manual INT NOT NULL,
+  saves_autosave_delay INT NOT NULL,
+  saves_autosave_focusout INT NOT NULL,
+  
+  -- Processed save counts
+  autosaves_effective INT NOT NULL,
+  checkpoint_autosave_count INT NOT NULL,
+  
+  -- Ratios
+  save_to_edit_ratio_manual NUMERIC NOT NULL,
+  save_to_edit_ratio_autosave NUMERIC NOT NULL,
+  effective_save_to_edit_ratio NUMERIC NOT NULL,
+  
+  -- Spacing metrics
+  avg_secs_between_saves NUMERIC,
+  median_secs_between_saves NUMERIC,
+  
+  -- Context
+  manual_save_share NUMERIC,
+  collapse_window_sec INT DEFAULT 60,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_user_ratio ON save_edit_sessions(user_id, effective_save_to_edit_ratio DESC);
+CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_start ON save_edit_sessions(start_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_session ON save_edit_sessions(session_id);
+

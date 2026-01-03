@@ -5,12 +5,14 @@ import { ProductDashboardViewProvider } from './webview/ProductDashboardViewProv
 import { FileSwitchTracker } from './tracking/FileSwitchTracker';
 import { FocusStreakTracker } from './tracking/FocusStreakTracker';
 import { EditSessionTracker } from './tracking/EditSessionTracker';
+import { SaveEditSessionTracker } from './tracking/SaveEditSessionTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
 let fileSwitchTracker: FileSwitchTracker | undefined;
 let focusStreakTracker: FocusStreakTracker | undefined;
 let editSessionTracker: EditSessionTracker | undefined;
+let saveEditSessionTracker: SaveEditSessionTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -49,7 +51,15 @@ export function activate(context: vscode.ExtensionContext) {
 					editSessionTracker.dispose();
 				}
 				editSessionTracker = new EditSessionTracker(authManager);
-				console.log('Edit Session Tracker started');			} else {
+				console.log('Edit Session Tracker started');
+				
+				// Start Save-Edit Session tracker
+				if (saveEditSessionTracker) {
+					saveEditSessionTracker.dispose();
+				}
+				saveEditSessionTracker = new SaveEditSessionTracker(authManager);
+				console.log('Save-Edit Session Tracker started');
+			} else {
 				console.log('[Extension] User signed out');
 				
 				// Stop tracking when signed out
@@ -64,6 +74,10 @@ export function activate(context: vscode.ExtensionContext) {
 				if (editSessionTracker) {
 					editSessionTracker.dispose();
 					editSessionTracker = undefined;
+				}
+				if (saveEditSessionTracker) {
+					saveEditSessionTracker.dispose();
+					saveEditSessionTracker = undefined;
 				}
 			}
 		})
@@ -83,6 +97,10 @@ export function activate(context: vscode.ExtensionContext) {
 		// Start Edit Session tracker
 		editSessionTracker = new EditSessionTracker(authManager);
 		console.log('Edit Session Tracker started (user already authenticated)');
+		
+		// Start Save-Edit Session tracker
+		saveEditSessionTracker = new SaveEditSessionTracker(authManager);
+		console.log('Save-Edit Session Tracker started (user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
@@ -165,5 +183,9 @@ export function deactivate() {
 	if (editSessionTracker) {
 		editSessionTracker.dispose();
 		console.log('Edit Session Tracker stopped');
+	}
+	if (saveEditSessionTracker) {
+		saveEditSessionTracker.dispose();
+		console.log('Save-Edit Session Tracker stopped');
 	}
 }
