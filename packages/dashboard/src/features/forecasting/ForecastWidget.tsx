@@ -7,11 +7,13 @@ import {
   LineElement,
   Tooltip,
   Legend,
+  Filler,
+  type TooltipItem,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { getForecast } from './api';
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend, Filler);
 
 type ForecastPoint = {
   date: string;
@@ -44,17 +46,18 @@ function formatTime(iso: string) {
 function getErrorMessage(err: unknown): string {
   if (err instanceof Error) return err.message;
   if (typeof err === 'string') return err;
-  try {
-    return JSON.stringify(err);
-  } catch {
-    return 'Failed to load forecast';
-  }
+  return 'Failed to load forecast';
+}
+
+function cssVar(name: string, fallback: string) {
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  return v || fallback;
 }
 
 export default function ForecastWidget() {
   const [state, setState] = useState<UiState>({ status: 'loading' });
 
-  // demo values for now
+  // demo values (later replace with real user)
   const userId = 'testUser';
   const days = 7;
 
@@ -79,6 +82,23 @@ export default function ForecastWidget() {
 
   const data = state.status === 'ready' ? state.data : null;
 
+  const peak = useMemo(() => {
+    if (!data?.points?.length) return null;
+    return data.points.reduce((best, p) =>
+      p.productiveMinutes > best.productiveMinutes ? p : best
+    );
+  }, [data]);
+
+  const chartTheme = useMemo(() => {
+    const fg = cssVar('--vscode-editor-foreground', '#e5e7eb');
+    const grid = cssVar('--vscode-widget-border', 'rgba(255,255,255,0.12)');
+    const accent = cssVar('--vscode-focusBorder', '#3b82f6');
+    const tooltipBg = cssVar('--vscode-editorHoverWidget-background', '#111827');
+    const tooltipBorder = cssVar('--vscode-editorHoverWidget-border', grid);
+
+    return { fg, grid, accent, tooltipBg, tooltipBorder };
+  }, [state.status]);
+
   const chartData = useMemo(() => {
     const points = data?.points ?? [];
     return {
@@ -87,77 +107,98 @@ export default function ForecastWidget() {
         {
           label: 'Productive minutes',
           data: points.map((p) => p.productiveMinutes),
+          borderColor: chartTheme.accent,
+          backgroundColor: chartTheme.accent,
           borderWidth: 2,
           tension: 0.35,
           pointRadius: 3,
+          pointHoverRadius: 5,
         },
       ],
     };
-  }, [data]);
+  }, [data, chartTheme.accent]);
 
   const chartOptions = useMemo(() => {
     return {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { display: false } },
-        y: { beginAtZero: true },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: chartTheme.tooltipBg,
+          borderColor: chartTheme.tooltipBorder,
+          borderWidth: 1,
+          titleColor: chartTheme.fg,
+          bodyColor: chartTheme.fg,
+          callbacks: {
+            label: (item: TooltipItem<'line'>) => {
+              const y = item.parsed.y; // number | null
+              if (y === null) return '';
+              return `${y} min`;
+            },
+          },
+        },
       },
-    } as const;
-  }, []);
-
-  const peak = useMemo(() => {
-    if (!data?.points?.length) return null;
-    return data.points.reduce((best, p) =>
-      p.productiveMinutes > best.productiveMinutes ? p : best
-    );
-  }, [data]);
+      scales: {
+        x: {
+          ticks: {
+            color: chartTheme.fg,
+            maxRotation: 0,
+            autoSkip: true,
+          },
+          grid: { display: false },
+        },
+        y: {
+          ticks: { color: chartTheme.fg },
+          grid: { color: chartTheme.grid },
+          beginAtZero: true,
+        },
+      },
+    };
+  }, [chartTheme]);
 
   return (
     <section className="rounded-xl border border-vscode-widget-border bg-vscode-widget-bg shadow-vscode overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-vscode-widget-border flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-lg font-semibold text-vscode-editor-fg">
+      <div className="px-4 py-3 border-b border-vscode-widget-border flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-base font-semibold text-vscode-editor-fg truncate">
             Productive Minutes Forecast
           </h2>
-          <p className="text-sm text-vscode-foreground/70">
+          <p className="text-xs text-vscode-foreground/70">
             User: <span className="font-medium text-vscode-editor-fg">{userId}</span> • Next {days}{' '}
             days
           </p>
         </div>
 
-        <div className="text-right">
-          {peak ? (
-            <div className="inline-flex flex-col items-end">
-              <span className="text-xs text-vscode-foreground/70">Peak day</span>
-              <span className="text-sm font-semibold text-vscode-editor-fg">
-                {peak.date} • {peak.productiveMinutes} min
-              </span>
+        {peak ? (
+          <div className="text-right shrink-0">
+            <div className="text-[11px] text-vscode-foreground/70">Peak day</div>
+            <div className="text-sm font-semibold text-vscode-editor-fg">
+              {peak.date} • {peak.productiveMinutes} min
             </div>
-          ) : (
-            <span className="text-xs text-vscode-foreground/70">—</span>
-          )}
-        </div>
+          </div>
+        ) : (
+          <span className="text-xs text-vscode-foreground/70">—</span>
+        )}
       </div>
 
       {/* Body */}
-      <div className="p-5 grid gap-5 lg:grid-cols-2">
+      <div className="p-4 grid gap-4 lg:grid-cols-2">
         {/* Chart */}
-        <div className="rounded-lg border border-vscode-widget-border bg-vscode-input-bg/30 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-vscode-editor-fg">Trend</h3>
-            <span className="text-xs text-vscode-foreground/70">
-              Generated: {data?.generatedAt ? formatTime(data.generatedAt) : '—'}
+        <div className="rounded-lg border border-vscode-widget-border bg-vscode-input-bg/30 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-vscode-editor-fg">Trend</h3>
+            <span className="text-[11px] text-vscode-foreground/70">
+              {data?.generatedAt ? `Generated: ${formatTime(data.generatedAt)}` : ' '}
             </span>
           </div>
 
-          <div className="h-52">
+          <div className="h-44">
             {state.status === 'loading' ? (
               <div className="h-full rounded-md bg-vscode-list-hover-bg animate-pulse" />
             ) : state.status === 'error' ? (
-              <div className="h-full flex items-center justify-center rounded-md border border-vscode-widget-border bg-vscode-editor-bg">
+              <div className="h-full flex items-center justify-center rounded-md border border-vscode-widget-border bg-vscode-editor-bg p-3">
                 <p className="text-sm text-red-400">{state.message}</p>
               </div>
             ) : (
@@ -167,18 +208,18 @@ export default function ForecastWidget() {
         </div>
 
         {/* Table */}
-        <div className="rounded-lg border border-vscode-widget-border bg-vscode-input-bg/30 p-4">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-vscode-editor-fg">Daily values</h3>
-            <span className="text-xs text-vscode-foreground/70">Range (lower–upper)</span>
+        <div className="rounded-lg border border-vscode-widget-border bg-vscode-input-bg/30 p-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-xs font-semibold text-vscode-editor-fg">Daily values</h3>
+            <span className="text-[11px] text-vscode-foreground/70">lower–upper</span>
           </div>
 
           {state.status === 'loading' ? (
             <div className="space-y-2">
-              <div className="h-9 rounded bg-vscode-list-hover-bg animate-pulse" />
-              <div className="h-9 rounded bg-vscode-list-hover-bg animate-pulse" />
-              <div className="h-9 rounded bg-vscode-list-hover-bg animate-pulse" />
-              <div className="h-9 rounded bg-vscode-list-hover-bg animate-pulse" />
+              <div className="h-8 rounded bg-vscode-list-hover-bg animate-pulse" />
+              <div className="h-8 rounded bg-vscode-list-hover-bg animate-pulse" />
+              <div className="h-8 rounded bg-vscode-list-hover-bg animate-pulse" />
+              <div className="h-8 rounded bg-vscode-list-hover-bg animate-pulse" />
             </div>
           ) : state.status === 'error' ? (
             <div className="rounded-md border border-vscode-widget-border bg-vscode-editor-bg p-3">
@@ -214,7 +255,7 @@ export default function ForecastWidget() {
             </div>
           )}
 
-          {data?.note && <p className="mt-3 text-xs text-vscode-foreground/70">{data.note}</p>}
+          {data?.note && <p className="mt-2 text-[11px] text-vscode-foreground/70">{data.note}</p>}
         </div>
       </div>
     </section>
