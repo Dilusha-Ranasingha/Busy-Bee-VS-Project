@@ -1,17 +1,17 @@
-import { AlertTriangle, CheckCircle2, TrendingDown, TrendingUp, Info, Code } from 'lucide-react';
 import { useDiagnosticDensity } from '../../../hooks/useDiagnosticDensity';
-import type { DiagnosticDensityEvent } from '../../../services/Metrics-Tracking/diagnosticDensity.service';
+import type { DiagnosticDensitySession } from '../../../services/Metrics-Tracking/diagnosticDensity.service';
+import { Card } from '../../../components/ui';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { useAuth } from '../../../contexts/AuthContext';
 import { SignInPrompt } from '../../../components/Auth/GitHubAuth';
 
 export function DiagnosticDensityPage() {
   const { user, isLoading: authLoading } = useAuth();
-  const { extremes, isLoading, error } = useDiagnosticDensity(user?.id || null);
+  const { bestSessions, isLoading, error } = useDiagnosticDensity(user?.id || null);
 
   if (authLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
+      <div className="flex items-center justify-center h-64">
         <LoadingSpinner />
       </div>
     );
@@ -23,7 +23,7 @@ export function DiagnosticDensityPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[300px]">
+      <div className="flex items-center justify-center h-64">
         <LoadingSpinner />
       </div>
     );
@@ -31,97 +31,77 @@ export function DiagnosticDensityPage() {
 
   if (error) {
     return (
-      <div className="p-3 rounded-lg border border-vscode-input-error-border bg-vscode-input-error-bg text-vscode-input-error-fg text-sm">
-        Error loading diagnostic density data: {error.message}
+      <div className="p-6 text-center">
+        <p className="text-red-500">Error loading diagnostic density data: {error.message}</p>
       </div>
     );
   }
 
-  const hasAnyData = extremes && (extremes.highest || extremes.lowestNonZero || extremes.latestZero);
+  const hasAnyData = bestSessions && (bestSessions.highest || bestSessions.lowest);
 
   if (!hasAnyData) {
     return (
-      <div className="border border-vscode-panel-border rounded-lg p-4 bg-vscode-editor-bg text-center">
-        <Code className="mx-auto mb-2 text-vscode-descriptionForeground" size={32} />
-        <p className="text-sm text-vscode-descriptionForeground">
-          No diagnostic density data available yet. Write code with errors/warnings to see metrics!
+      <div className="p-6 text-center">
+        <p className="text-gray-500">
+          No diagnostic density sessions yet. Create and fix errors/warnings to see metrics!
         </p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-4">
-        {extremes?.highest && (
-          <EventCard
-            event={extremes.highest}
-            title="Highest Density (Worst)"
-            subtitle="Most problems per KLOC"
-            variant="error"
+    <div className="p-6 space-y-6">
+      <div>
+        <h1 className="text-3xl font-bold text-gray-900">Diagnostics Density Sessions</h1>
+        <p className="text-gray-600 mt-2">
+          Track error/warning sessions from first appearance to resolution
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {bestSessions?.highest && (
+          <SessionCard
+            session={bestSessions.highest}
+            title="Worst Session"
+            subtitle="Highest peak density"
+            color="red"
           />
         )}
 
-        {extremes?.lowestNonZero && (
-          <EventCard
-            event={extremes.lowestNonZero}
-            title="Lowest Non-Zero (Best)"
-            subtitle="Cleanest code with some issues"
-            variant="warning"
-          />
-        )}
-
-        {extremes?.latestZero && (
-          <EventCard
-            event={extremes.latestZero}
-            title="Latest Clean (Zero)"
-            subtitle="No errors or warnings"
-            variant="success"
+        {bestSessions?.lowest && (
+          <SessionCard
+            session={bestSessions.lowest}
+            title="Best Session"
+            subtitle="Lowest peak density"
+            color="green"
           />
         )}
       </div>
 
-      <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
-        <div className="flex items-center gap-2 mb-3">
-          <Info className="text-brand-primary" size={20} strokeWidth={2} />
-          <h3 className="text-base font-semibold text-vscode-editor-fg">Understanding the Metrics</h3>
-        </div>
-        <ul className="text-sm text-vscode-foreground space-y-2">
-          <li className="flex items-start gap-2">
-            <span className="text-brand-primary mt-0.5">•</span>
-            <span><strong className="text-vscode-editor-fg">KLOC:</strong> Thousand Lines Of Code (e.g., 200 lines = 0.2 KLOC)</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-brand-primary mt-0.5">•</span>
-            <span><strong className="text-vscode-editor-fg">Density:</strong> (Errors + Warnings) / KLOC</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-brand-primary mt-0.5">•</span>
-            <span><strong className="text-vscode-editor-fg">Event-Based:</strong> Snapshot created when diagnostics change</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-brand-primary mt-0.5">•</span>
-            <span><strong className="text-vscode-editor-fg">Debounced:</strong> 250ms delay to avoid rapid changes</span>
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="text-brand-primary mt-0.5">•</span>
-            <span><strong className="text-vscode-editor-fg">Flicker Filtered:</strong> Ignores diagnostics that appear/vanish within 2 seconds</span>
-          </li>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h3 className="font-semibold text-blue-900 mb-2">How Sessions Work</h3>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li>• <strong>Session Start:</strong> When errors/warnings first appear in a file</li>
+          <li>• <strong>Session End:</strong> When all errors/warnings are resolved (reach 0)</li>
+          <li>• <strong>Peak Tracking:</strong> Records the highest error density during the session</li>
+          <li>• <strong>KLOC:</strong> Thousand Lines Of Code (e.g., 200 lines = 0.2 KLOC)</li>
+          <li>• <strong>Density:</strong> (Peak Errors + Peak Warnings) / KLOC</li>
         </ul>
       </div>
     </div>
   );
 }
 
-interface EventCardProps {
-  event: DiagnosticDensityEvent;
+interface SessionCardProps {
+  session: DiagnosticDensitySession;
   title: string;
   subtitle: string;
-  variant: 'error' | 'warning' | 'success';
+  color: 'red' | 'green';
 }
 
-function EventCard({ event, title, subtitle, variant }: EventCardProps) {
-  const timestamp = new Date(event.ts);
+function SessionCard({ session, title, subtitle, color }: SessionCardProps) {
+  const startDate = new Date(session.startTs);
+  const endDate = new Date(session.endTs);
   
   const formatDateTime = (date: Date) => {
     return date.toLocaleString('en-US', {
@@ -133,92 +113,76 @@ function EventCard({ event, title, subtitle, variant }: EventCardProps) {
     });
   };
 
-  const variantConfig = {
-    error: {
-      icon: AlertTriangle,
-      iconColor: 'text-red-500',
-      valueColor: 'text-red-600',
-      badgeBg: 'bg-red-500/10',
-      badgeText: 'text-red-600',
-      badgeBorder: 'ring-red-500/20',
+  const colorClasses = {
+    red: {
+      bg: 'bg-red-50',
+      border: 'border-red-300',
+      value: 'text-red-700',
+      badge: 'bg-red-100 text-red-800',
     },
-    warning: {
-      icon: TrendingDown,
-      iconColor: 'text-yellow-500',
-      valueColor: 'text-yellow-600',
-      badgeBg: 'bg-yellow-500/10',
-      badgeText: 'text-yellow-600',
-      badgeBorder: 'ring-yellow-500/20',
-    },
-    success: {
-      icon: CheckCircle2,
-      iconColor: 'text-green-500',
-      valueColor: 'text-green-600',
-      badgeBg: 'bg-green-500/10',
-      badgeText: 'text-green-600',
-      badgeBorder: 'ring-green-500/20',
+    green: {
+      bg: 'bg-green-50',
+      border: 'border-green-300',
+      value: 'text-green-700',
+      badge: 'bg-green-100 text-green-800',
     },
   };
 
-  const config = variantConfig[variant];
-  const Icon = config.icon;
-  const problems = event.errors + event.warnings;
+  const classes = colorClasses[color];
+  const peakProblems = session.peakErrors + session.peakWarnings;
 
   return (
-    <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
-      <div className="flex items-start gap-3 mb-3">
-        <Icon className={config.iconColor} size={20} strokeWidth={2} />
-        <div className="flex-1 min-w-0">
-          <h3 className="text-base font-semibold text-vscode-editor-fg">{title}</h3>
-          <p className="text-xs text-vscode-foreground opacity-80">{subtitle}</p>
+    <Card className={`p-6 ${classes.bg} border-2 ${classes.border}`}>
+      <div className="mb-4">
+        <h3 className="text-lg font-bold text-gray-900">{title}</h3>
+        <p className="text-sm text-gray-600">{subtitle}</p>
+      </div>
+
+      <div className="mb-4">
+        <div className={`text-4xl font-bold ${classes.value}`}>
+          {session.peakDensityPerKloc.toFixed(2)}
         </div>
+        <div className="text-sm text-gray-600 mt-1">per KLOC (peak)</div>
       </div>
 
-      <div className="bg-vscode-editor-bg border border-vscode-panel-border rounded-lg p-3 mb-3">
-        <div className="flex items-center gap-2 mb-1">
-          <TrendingUp className={config.iconColor} size={16} />
-          <div className={`text-2xl font-bold ${config.valueColor}`}>
-            {event.densityPerKloc.toFixed(2)}
-          </div>
+      <div className="space-y-2 mb-4">
+        <MetricRow label="Peak Problems" value={`${peakProblems}`} />
+        <MetricRow label="Peak Errors" value={`${session.peakErrors}`} />
+        <MetricRow label="Peak Warnings" value={`${session.peakWarnings}`} />
+        <MetricRow label="Peak Lines" value={`${session.peakLineCount}`} />
+        <MetricRow label="Peak KLOC" value={(session.peakLineCount / 1000).toFixed(3)} />
+      </div>
+
+      <div className="pt-4 border-t border-gray-200 space-y-2">
+        <div className="text-xs text-gray-600">
+          <strong>Duration:</strong> {session.durationMin.toFixed(2)} minutes
         </div>
-        <div className="text-xs text-vscode-foreground opacity-75">per KLOC</div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 mb-3">
-        <MetricRow label="Problems" value={`${problems}`} />
-        <MetricRow label="Errors" value={`${event.errors}`} />
-        <MetricRow label="Warnings" value={`${event.warnings}`} />
-        <MetricRow label="Lines" value={`${event.lineCount}`} />
-      </div>
-
-      <div className="text-[10px] text-vscode-foreground opacity-75 mb-2">
-        KLOC: {(event.lineCount / 1000).toFixed(3)}
-      </div>
-
-      <div className="pt-3 border-t border-vscode-panel-border space-y-2">
-        <div className="text-xs text-vscode-foreground opacity-80">
-          {formatDateTime(timestamp)}
+        <div className="text-xs text-gray-600">
+          <strong>Started:</strong> {formatDateTime(startDate)}
         </div>
-        {event.language && (
+        <div className="text-xs text-gray-600">
+          <strong>Resolved:</strong> {formatDateTime(endDate)}
+        </div>
+        {session.language && (
           <div>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${config.badgeBg} ${config.badgeText} ring-1 ring-inset ${config.badgeBorder}`}>
-              {event.language.toUpperCase()}
+            <span className={`inline-block px-2 py-1 rounded text-xs font-medium ${classes.badge}`}>
+              {session.language.toUpperCase()}
             </span>
           </div>
         )}
-        <div className="text-[10px] text-vscode-descriptionForeground font-mono break-all">
-          {event.fileHash}
+        <div className="text-xs text-gray-500 font-mono break-all">
+          File: {session.fileHash}
         </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
 function MetricRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between text-xs border border-vscode-panel-border rounded px-2 py-1.5 bg-vscode-editor-bg">
-      <span className="text-vscode-foreground opacity-75">{label}:</span>
-      <span className="font-semibold text-vscode-editor-fg">{value}</span>
+    <div className="flex justify-between text-sm">
+      <span className="text-gray-600">{label}:</span>
+      <span className="font-semibold text-gray-900">{value}</span>
     </div>
   );
 }

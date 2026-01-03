@@ -5,22 +5,22 @@ import { AuthManager } from '../auth/AuthManager';
 
 const API_URL = 'http://localhost:4000';
 
-interface DiagnosticSnapshot {
+interface DiagnosticSession {
   fileHash: string;
   language: string | undefined;
-  timestamp: Date;
-  lineCount: number;
-  errors: number;
-  warnings: number;
-  densityPerKloc: number;
+  sessionId: string;
+  startTs: Date;
+  peakLineCount: number;
+  peakErrors: number;
+  peakWarnings: number;
+  peakDensityPerKloc: number;
 }
 
 export class DiagnosticDensityTracker {
   private disposables: vscode.Disposable[] = [];
   private debounceTimers = new Map<string, NodeJS.Timeout>();
-  private lastSnapshots = new Map<string, DiagnosticSnapshot>();
+  private activeSessions = new Map<string, DiagnosticSession>();
   private readonly DEBOUNCE_MS = 250;
-  private readonly FLICKER_THRESHOLD_MS = 2000;
 
   constructor(
     private authManager: AuthManager,
@@ -39,14 +39,7 @@ export class DiagnosticDensityTracker {
       }
     });
 
-    // Optional: Also snapshot on save as a safety measure
-    const saveListener = vscode.workspace.onDidSaveTextDocument((document) => {
-      if (document.uri.scheme === 'file') {
-        this.handleDiagnosticChange(document.uri);
-      }
-    });
-
-    this.disposables.push(diagnosticListener, saveListener);
+    this.disposables.push(diagnosticListener);
   }
 
   private handleDiagnosticChange(uri: vscode.Uri): void {
@@ -89,51 +82,103 @@ export class DiagnosticDensityTracker {
         }
       }
 
-      // Compute KLOC density
       const problems = errors + warnings;
-      const kloc = Math.max(0.001, lineCount / 1000);
-      const densityPerKloc = problems / kloc;
-
       const fileHash = this.hashPath(uri.fsPath);
       const language = document.languageId;
-      const timestamp = new Date();
 
-      const snapshot: DiagnosticSnapshot = {
-        fileHash,
-        language,
-        timestamp,
-        lineCount,
-        errors,
-        warnings,
-        densityPerKloc,
-      };
+      // Check if there's an active session for this file
+      const activeSession = this.activeSessions.get(fileHash);
 
-      // Check for flicker (diagnostics appear & vanish within 2s)
-      const lastSnapshot = this.lastSnapshots.get(fileHash);
-      if (lastSnapshot) {
-        const timeDiff = timestamp.getTime() - lastSnapshot.timestamp.getTime();
-        
-        // If density changed from 0 to non-zero or vice versa within 2s, it's likely flicker
-        if (timeDiff <= this.FLICKER_THRESHOLD_MS) {
-          const wasZero = lastSnapshot.densityPerKloc === 0;
-          const isZero = densityPerKloc === 0;
-          
-          if (wasZero !== isZero) {
-            // Flicker detected - ignore this snapshot
-            console.log(`[DiagnosticDensity] Flicker detected for ${fileHash}, ignoring`);
-            return;
-          }
+      if (problems === 0) {
+        // No errors/warnings
+        if (activeSession) {
+          // Session end - errors resolved!
+          await this.endSession(activeSession, lineCount);
+        }
+        // No session and no problems - do nothing
+      } else {
+        // Has errors/warnings
+        if (activeSession) {
+          // Update existing session with new peak if needed
+          this.updateSessionPeak(activeSession, lineCount, errors, warnings);
+        } else {
+          // Start new session
+          this.startSession(fileHash, language, lineCount, errors, warnings);
         }
       }
-
-      // Store snapshot for flicker detection
-      this.lastSnapshots.set(fileHash, snapshot);
-
-      // Send to backend
-      await this.sendSnapshot(snapshot);
     } catch (error) {
       console.error('[DiagnosticDensity] Error processing snapshot:', error);
     }
+  }
+
+  private startSession(
+    fileHash: string,
+    language: string | undefined,
+    lineCount: number,
+    errors: number,
+    warnings: number
+  ): void {
+    const kloc = Math.max(0.001, lineCount / 1000);
+    const problems = errors + warnings;
+    const densityPerKloc = problems / kloc;
+
+    const session: DiagnosticSession = {
+      fileHash,
+      language,
+      sessionId: this.generateSessionId(),
+      startTs: new Date(),
+      peakLineCount: lineCount,
+      peakErrors: errors,
+      peakWarnings: warnings,
+      peakDensityPerKloc: densityPerKloc,
+    };
+
+    this.activeSessions.set(fileHash, session);
+    
+    console.log(
+      `[DiagnosticDensity] Session started for ${fileHash}: ` +
+      `${densityPerKloc.toFixed(2)} per KLOC (${errors}E + ${warnings}W)`
+    );
+  }
+
+  private updateSessionPeak(
+    session: DiagnosticSession,
+    lineCount: number,
+    errors: number,
+    warnings: number
+  ): void {
+    const kloc = Math.max(0.001, lineCount / 1000);
+    const problems = errors + warnings;
+    const densityPerKloc = problems / kloc;
+
+    // Update peak if current is higher
+    if (densityPerKloc > session.peakDensityPerKloc) {
+      session.peakLineCount = lineCount;
+      session.peakErrors = errors;
+      session.peakWarnings = warnings;
+      session.peakDensityPerKloc = densityPerKloc;
+      
+      console.log(
+        `[DiagnosticDensity] New peak for ${session.fileHash}: ` +
+        `${densityPerKloc.toFixed(2)} per KLOC (${errors}E + ${warnings}W)`
+      );
+    }
+  }
+
+  private async endSession(session: DiagnosticSession, finalLineCount: number): Promise<void> {
+    const endTs = new Date();
+    const durationMin = (endTs.getTime() - session.startTs.getTime()) / 1000 / 60;
+
+    // Remove from active sessions
+    this.activeSessions.delete(session.fileHash);
+
+    // Send to backend
+    await this.sendSession(session, endTs, durationMin, finalLineCount);
+
+    console.log(
+      `[DiagnosticDensity] Session ended for ${session.fileHash}: ` +
+      `${durationMin.toFixed(2)} min, peak ${session.peakDensityPerKloc.toFixed(2)} per KLOC`
+    );
   }
 
   private async getDocument(uri: vscode.Uri): Promise<vscode.TextDocument | undefined> {
@@ -152,7 +197,12 @@ export class DiagnosticDensityTracker {
     }
   }
 
-  private async sendSnapshot(snapshot: DiagnosticSnapshot): Promise<void> {
+  private async sendSession(
+    session: DiagnosticSession,
+    endTs: Date,
+    durationMin: number,
+    finalLineCount: number
+  ): Promise<void> {
     try {
       const user = this.authManager.getUser();
       if (!user) {
@@ -165,23 +215,31 @@ export class DiagnosticDensityTracker {
 
       await axios.post(`${API_URL}/api/diagnostic-density`, {
         userId: user.id,
+        sessionId: session.sessionId,
         workspaceId,
-        fileHash: snapshot.fileHash,
-        language: snapshot.language,
-        ts: snapshot.timestamp.toISOString(),
-        lineCount: snapshot.lineCount,
-        errors: snapshot.errors,
-        warnings: snapshot.warnings,
-        densityPerKloc: snapshot.densityPerKloc,
+        fileHash: session.fileHash,
+        language: session.language,
+        startTs: session.startTs.toISOString(),
+        endTs: endTs.toISOString(),
+        durationMin,
+        peakLineCount: session.peakLineCount,
+        peakErrors: session.peakErrors,
+        peakWarnings: session.peakWarnings,
+        peakDensityPerKloc: session.peakDensityPerKloc,
+        finalLineCount,
       });
 
       console.log(
-        `[DiagnosticDensity] Event recorded: ${snapshot.densityPerKloc.toFixed(2)} per KLOC ` +
-        `(${snapshot.errors}E + ${snapshot.warnings}W / ${snapshot.lineCount} LOC)`
+        `[DiagnosticDensity] Session saved: Peak ${session.peakDensityPerKloc.toFixed(2)} per KLOC, ` +
+        `Duration ${durationMin.toFixed(2)} min`
       );
     } catch (error) {
-      console.error('[DiagnosticDensity] Failed to send snapshot:', error);
+      console.error('[DiagnosticDensity] Failed to send session:', error);
     }
+  }
+
+  private generateSessionId(): string {
+    return `diag_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   }
 
   private hashPath(path: string): string {
@@ -189,12 +247,23 @@ export class DiagnosticDensityTracker {
   }
 
   public dispose(): void {
+    // End all active sessions before disposing
+    const promises: Promise<void>[] = [];
+    for (const [fileHash, session] of this.activeSessions.entries()) {
+      // End sessions with current line count (unknown, use 0)
+      promises.push(this.endSession(session, 0));
+    }
+    
+    Promise.all(promises).catch(error => {
+      console.error('[DiagnosticDensity] Error ending sessions on dispose:', error);
+    });
+
     // Clear all debounce timers
     for (const timer of this.debounceTimers.values()) {
       clearTimeout(timer);
     }
     this.debounceTimers.clear();
-    this.lastSnapshots.clear();
+    this.activeSessions.clear();
 
     // Dispose all listeners
     this.disposables.forEach(d => d.dispose());

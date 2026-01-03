@@ -153,30 +153,36 @@ CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_user_ratio ON save_edit_sessio
 CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_start ON save_edit_sessions(start_ts DESC);
 CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_session ON save_edit_sessions(session_id);
 
--- Diagnostic Density Events (event-based, no sessions)
-CREATE TABLE IF NOT EXISTS diagnostic_density_events (
+-- Diagnostic Density Sessions (session-based: start when errors appear, end when resolved)
+CREATE TABLE IF NOT EXISTS diagnostic_density_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
   user_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
   workspace_id TEXT,
   
   file_hash TEXT NOT NULL,
   language TEXT,
   
-  ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- Session timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  duration_min NUMERIC(10, 2) NOT NULL CHECK (duration_min >= 0),
   
-  line_count INT NOT NULL CHECK (line_count >= 0),
-  errors INT NOT NULL CHECK (errors >= 0),
-  warnings INT NOT NULL CHECK (warnings >= 0),
+  -- Peak metrics during session (highest error count)
+  peak_line_count INT NOT NULL CHECK (peak_line_count >= 0),
+  peak_errors INT NOT NULL CHECK (peak_errors >= 0),
+  peak_warnings INT NOT NULL CHECK (peak_warnings >= 0),
+  peak_density_per_kloc NUMERIC(10, 4) NOT NULL CHECK (peak_density_per_kloc >= 0),
   
-  density_per_kloc NUMERIC(10, 4) NOT NULL CHECK (density_per_kloc >= 0),
+  -- Final state when session ended (errors became 0)
+  final_line_count INT NOT NULL CHECK (final_line_count >= 0),
   
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Indexes for extremes queries
-CREATE INDEX IF NOT EXISTS idx_diagnostic_density_user ON diagnostic_density_events(user_id, ts DESC);
-CREATE INDEX IF NOT EXISTS idx_diagnostic_density_highest ON diagnostic_density_events(user_id, density_per_kloc DESC);
-CREATE INDEX IF NOT EXISTS idx_diagnostic_density_lowest ON diagnostic_density_events(user_id, density_per_kloc ASC) WHERE density_per_kloc > 0;
-CREATE INDEX IF NOT EXISTS idx_diagnostic_density_zero ON diagnostic_density_events(user_id, ts DESC) WHERE density_per_kloc = 0;
+-- Indexes for session queries
+CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_user ON diagnostic_density_sessions(user_id, start_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_highest ON diagnostic_density_sessions(user_id, peak_density_per_kloc DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_session ON diagnostic_density_sessions(session_id);
 

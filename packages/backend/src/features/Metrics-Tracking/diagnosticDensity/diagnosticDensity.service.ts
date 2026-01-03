@@ -1,87 +1,87 @@
 import { getPool } from '../../../config/db';
 import type {
-  CreateDiagnosticDensityEventInput,
-  DiagnosticDensityEvent,
-  DiagnosticDensityExtremes,
+  CreateDiagnosticDensitySessionInput,
+  DiagnosticDensitySession,
+  DiagnosticDensityBestSessions,
 } from './diagnosticDensity.types';
 
 export const diagnosticDensityService = {
-  async createEvent(input: CreateDiagnosticDensityEventInput): Promise<DiagnosticDensityEvent> {
+  async createSession(input: CreateDiagnosticDensitySessionInput): Promise<DiagnosticDensitySession> {
     const pool = getPool();
     const query = `
-      INSERT INTO diagnostic_density_events (
-        user_id, workspace_id, file_hash, language, ts,
-        line_count, errors, warnings, density_per_kloc
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      INSERT INTO diagnostic_density_sessions (
+        user_id, session_id, workspace_id, file_hash, language,
+        start_ts, end_ts, duration_min,
+        peak_line_count, peak_errors, peak_warnings, peak_density_per_kloc,
+        final_line_count
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `;
 
     const values = [
       input.userId,
+      input.sessionId,
       input.workspaceId || null,
       input.fileHash,
       input.language || null,
-      input.ts,
-      input.lineCount,
-      input.errors,
-      input.warnings,
-      input.densityPerKloc,
+      input.startTs,
+      input.endTs,
+      input.durationMin,
+      input.peakLineCount,
+      input.peakErrors,
+      input.peakWarnings,
+      input.peakDensityPerKloc,
+      input.finalLineCount,
     ];
 
     const result = await pool.query(query, values);
-    return mapRowToEvent(result.rows[0]);
+    return mapRowToSession(result.rows[0]);
   },
 
-  async getExtremes(userId: string): Promise<DiagnosticDensityExtremes> {
+  async getBestSessions(userId: string): Promise<DiagnosticDensityBestSessions> {
     const pool = getPool();
     
-    // Get highest density (worst)
+    // Get highest peak density (worst session)
     const highestQuery = `
-      SELECT * FROM diagnostic_density_events
+      SELECT * FROM diagnostic_density_sessions
       WHERE user_id = $1
-      ORDER BY density_per_kloc DESC, ts DESC
+      ORDER BY peak_density_per_kloc DESC, start_ts DESC
       LIMIT 1
     `;
     const highestResult = await pool.query(highestQuery, [userId]);
 
-    // Get lowest non-zero density (best under pressure)
+    // Get lowest peak density (best session - least problems)
     const lowestQuery = `
-      SELECT * FROM diagnostic_density_events
-      WHERE user_id = $1 AND density_per_kloc > 0
-      ORDER BY density_per_kloc ASC, ts DESC
+      SELECT * FROM diagnostic_density_sessions
+      WHERE user_id = $1
+      ORDER BY peak_density_per_kloc ASC, start_ts DESC
       LIMIT 1
     `;
     const lowestResult = await pool.query(lowestQuery, [userId]);
 
-    // Get latest zero density (cleaned)
-    const zeroQuery = `
-      SELECT * FROM diagnostic_density_events
-      WHERE user_id = $1 AND density_per_kloc = 0
-      ORDER BY ts DESC
-      LIMIT 1
-    `;
-    const zeroResult = await pool.query(zeroQuery, [userId]);
-
     return {
-      highest: highestResult.rows[0] ? mapRowToEvent(highestResult.rows[0]) : null,
-      lowestNonZero: lowestResult.rows[0] ? mapRowToEvent(lowestResult.rows[0]) : null,
-      latestZero: zeroResult.rows[0] ? mapRowToEvent(zeroResult.rows[0]) : null,
+      highest: highestResult.rows[0] ? mapRowToSession(highestResult.rows[0]) : null,
+      lowest: lowestResult.rows[0] ? mapRowToSession(lowestResult.rows[0]) : null,
     };
   },
 };
 
-function mapRowToEvent(row: any): DiagnosticDensityEvent {
+function mapRowToSession(row: any): DiagnosticDensitySession {
   return {
     id: row.id,
     userId: row.user_id,
+    sessionId: row.session_id,
     workspaceId: row.workspace_id,
     fileHash: row.file_hash,
     language: row.language,
-    ts: row.ts,
-    lineCount: parseInt(row.line_count),
-    errors: parseInt(row.errors),
-    warnings: parseInt(row.warnings),
-    densityPerKloc: parseFloat(row.density_per_kloc),
+    startTs: row.start_ts,
+    endTs: row.end_ts,
+    durationMin: parseFloat(row.duration_min),
+    peakLineCount: parseInt(row.peak_line_count),
+    peakErrors: parseInt(row.peak_errors),
+    peakWarnings: parseInt(row.peak_warnings),
+    peakDensityPerKloc: parseFloat(row.peak_density_per_kloc),
+    finalLineCount: parseInt(row.final_line_count),
     createdAt: row.created_at,
   };
 }

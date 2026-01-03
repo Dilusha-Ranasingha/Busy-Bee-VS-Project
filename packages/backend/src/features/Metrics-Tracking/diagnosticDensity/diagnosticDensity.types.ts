@@ -1,31 +1,38 @@
-export interface CreateDiagnosticDensityEventInput {
+export interface CreateDiagnosticDensitySessionInput {
   userId: string;
+  sessionId: string;
   workspaceId?: string;
   fileHash: string;
   language?: string;
-  ts: Date;
-  lineCount: number;
-  errors: number;
-  warnings: number;
-  densityPerKloc: number;
+  startTs: Date;
+  endTs: Date;
+  durationMin: number;
+  peakLineCount: number;
+  peakErrors: number;
+  peakWarnings: number;
+  peakDensityPerKloc: number;
+  finalLineCount: number;
 }
 
-export interface DiagnosticDensityEvent {
+export interface DiagnosticDensitySession {
   id: string;
   userId: string;
+  sessionId: string;
   workspaceId?: string;
   fileHash: string;
   language?: string;
-  ts: string;
-  lineCount: number;
-  errors: number;
-  warnings: number;
-  densityPerKloc: number;
+  startTs: string;
+  endTs: string;
+  durationMin: number;
+  peakLineCount: number;
+  peakErrors: number;
+  peakWarnings: number;
+  peakDensityPerKloc: number;
+  finalLineCount: number;
   createdAt: string;
 }
 
-export interface DiagnosticDensityExtremes {
-  highest: DiagnosticDensityEvent | null;
-  lowestNonZero: DiagnosticDensityEvent | null;
-  latestZero: DiagnosticDensityEvent | null;
+export interface DiagnosticDensityBestSessions {
+  highest: DiagnosticDensitySession | null;
+  lowest: DiagnosticDensitySession | null;
 }

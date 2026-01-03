@@ -2,17 +2,17 @@ import { Request, Response } from 'express';
 import { diagnosticDensityService } from './diagnosticDensity.service';
 
 export const diagnosticDensityController = {
-  async createEvent(req: Request, res: Response): Promise<Response> {
+  async createSession(req: Request, res: Response): Promise<Response> {
     try {
-      const event = await diagnosticDensityService.createEvent(req.body);
-      return res.status(201).json(event);
+      const session = await diagnosticDensityService.createSession(req.body);
+      return res.status(201).json(session);
     } catch (error) {
-      console.error('Error creating diagnostic density event:', error);
-      return res.status(500).json({ error: 'Failed to create event' });
+      console.error('Error creating diagnostic density session:', error);
+      return res.status(500).json({ error: 'Failed to create session' });
     }
   },
 
-  async getExtremes(req: Request, res: Response): Promise<Response> {
+  async getBestSessions(req: Request, res: Response): Promise<Response> {
     try {
       const { userId } = req.query;
 
@@ -20,11 +20,11 @@ export const diagnosticDensityController = {
         return res.status(400).json({ error: 'userId is required' });
       }
 
-      const extremes = await diagnosticDensityService.getExtremes(userId);
-      return res.json(extremes);
+      const sessions = await diagnosticDensityService.getBestSessions(userId);
+      return res.json(sessions);
     } catch (error) {
-      console.error('Error fetching diagnostic density extremes:', error);
-      return res.status(500).json({ error: 'Failed to fetch extremes' });
+      console.error('Error fetching best diagnostic density sessions:', error);
+      return res.status(500).json({ error: 'Failed to fetch sessions' });
     }
   },
 };
