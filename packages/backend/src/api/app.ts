@@ -8,6 +8,7 @@ import fileSwitchRoutes from '../features/Metrics-Tracking/fileSwitch/fileSwitch
 import focusStreakRoutes from '../features/Metrics-Tracking/focusStreak/focusStreak.routes.js';
 import editSessionsRoutes from '../features/Metrics-Tracking/editSessions/editSessions.routes.js';
 import saveEditSessionsRoutes from '../features/Metrics-Tracking/saveEditSessions/saveEditSessions.routes.js';
+import diagnosticDensityRoutes from '../features/Metrics-Tracking/diagnosticDensity/diagnosticDensity.routes.js';
 import authRoutes from '../features/auth/auth.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
@@ -24,6 +25,7 @@ app.use('/api/file-switch', fileSwitchRoutes);
 app.use('/api/focus-streaks', focusStreakRoutes);
 app.use('/api/edit-sessions', editSessionsRoutes);
 app.use('/api/save-edit-sessions', saveEditSessionsRoutes);
+app.use('/api/diagnostic-density', diagnosticDensityRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);

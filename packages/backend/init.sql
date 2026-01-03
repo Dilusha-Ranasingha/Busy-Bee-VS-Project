@@ -153,3 +153,30 @@ CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_user_ratio ON save_edit_sessio
 CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_start ON save_edit_sessions(start_ts DESC);
 CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_session ON save_edit_sessions(session_id);
 
+-- Diagnostic Density Events (event-based, no sessions)
+CREATE TABLE IF NOT EXISTS diagnostic_density_events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  user_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  file_hash TEXT NOT NULL,
+  language TEXT,
+  
+  ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  line_count INT NOT NULL CHECK (line_count >= 0),
+  errors INT NOT NULL CHECK (errors >= 0),
+  warnings INT NOT NULL CHECK (warnings >= 0),
+  
+  density_per_kloc NUMERIC(10, 4) NOT NULL CHECK (density_per_kloc >= 0),
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for extremes queries
+CREATE INDEX IF NOT EXISTS idx_diagnostic_density_user ON diagnostic_density_events(user_id, ts DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_density_highest ON diagnostic_density_events(user_id, density_per_kloc DESC);
+CREATE INDEX IF NOT EXISTS idx_diagnostic_density_lowest ON diagnostic_density_events(user_id, density_per_kloc ASC) WHERE density_per_kloc > 0;
+CREATE INDEX IF NOT EXISTS idx_diagnostic_density_zero ON diagnostic_density_events(user_id, ts DESC) WHERE density_per_kloc = 0;
+

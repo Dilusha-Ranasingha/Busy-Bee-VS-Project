@@ -6,6 +6,7 @@ import { FileSwitchTracker } from './tracking/FileSwitchTracker';
 import { FocusStreakTracker } from './tracking/FocusStreakTracker';
 import { EditSessionTracker } from './tracking/EditSessionTracker';
 import { SaveEditSessionTracker } from './tracking/SaveEditSessionTracker';
+import { DiagnosticDensityTracker } from './tracking/DiagnosticDensityTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
@@ -13,6 +14,7 @@ let fileSwitchTracker: FileSwitchTracker | undefined;
 let focusStreakTracker: FocusStreakTracker | undefined;
 let editSessionTracker: EditSessionTracker | undefined;
 let saveEditSessionTracker: SaveEditSessionTracker | undefined;
+let diagnosticDensityTracker: DiagnosticDensityTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -59,6 +61,16 @@ export function activate(context: vscode.ExtensionContext) {
 				}
 				saveEditSessionTracker = new SaveEditSessionTracker(authManager);
 				console.log('Save-Edit Session Tracker started');
+				
+				// Start Diagnostic Density tracker
+				if (diagnosticDensityTracker) {
+					diagnosticDensityTracker.dispose();
+				}
+				diagnosticDensityTracker = new DiagnosticDensityTracker(
+					authManager,
+					vscode.workspace.workspaceFolders?.[0]
+				);
+				console.log('Diagnostic Density Tracker started');
 			} else {
 				console.log('[Extension] User signed out');
 				
@@ -78,6 +90,10 @@ export function activate(context: vscode.ExtensionContext) {
 				if (saveEditSessionTracker) {
 					saveEditSessionTracker.dispose();
 					saveEditSessionTracker = undefined;
+				}
+				if (diagnosticDensityTracker) {
+					diagnosticDensityTracker.dispose();
+					diagnosticDensityTracker = undefined;
 				}
 			}
 		})
@@ -101,6 +117,13 @@ export function activate(context: vscode.ExtensionContext) {
 		// Start Save-Edit Session tracker
 		saveEditSessionTracker = new SaveEditSessionTracker(authManager);
 		console.log('Save-Edit Session Tracker started (user already authenticated)');
+		
+		// Start Diagnostic Density tracker
+		diagnosticDensityTracker = new DiagnosticDensityTracker(
+			authManager,
+			vscode.workspace.workspaceFolders?.[0]
+		);
+		console.log('Diagnostic Density Tracker started (user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
@@ -187,5 +210,9 @@ export function deactivate() {
 	if (saveEditSessionTracker) {
 		saveEditSessionTracker.dispose();
 		console.log('Save-Edit Session Tracker stopped');
+	}
+	if (diagnosticDensityTracker) {
+		diagnosticDensityTracker.dispose();
+		console.log('Diagnostic Density Tracker stopped');
 	}
 }
