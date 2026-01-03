@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { Card } from '../../../components/ui/Card';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { useErrorFixTime } from '../../../hooks/useErrorFixTime';
 import { useAuth } from '../../../contexts/AuthContext';
 import { SignInPrompt } from '../../../components/Auth/GitHubAuth';
-import { Clock, TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { Clock, TrendingUp, TrendingDown, Activity, Info, Timer } from 'lucide-react';
 
 export function ErrorFixTimePage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -13,7 +12,7 @@ export function ErrorFixTimePage() {
 
   if (authLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-[400px]">
         <LoadingSpinner />
       </div>
     );
@@ -25,7 +24,7 @@ export function ErrorFixTimePage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-[400px]">
         <LoadingSpinner />
       </div>
     );
@@ -33,16 +32,17 @@ export function ErrorFixTimePage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-red-500">Error loading stats: {error.message}</p>
+      <div className="p-3 rounded-lg border border-vscode-input-error-border bg-vscode-input-error-bg text-vscode-input-error-fg text-sm">
+        Error loading stats: {error.message}
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-gray-500">No error fix time data available</p>
+      <div className="border border-vscode-panel-border rounded-lg p-4 bg-vscode-editor-bg text-center">
+        <Timer className="mx-auto mb-2 text-vscode-descriptionForeground" size={32} />
+        <p className="text-sm text-vscode-descriptionForeground">No error fix time data available</p>
       </div>
     );
   }
@@ -66,182 +66,194 @@ export function ErrorFixTimePage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Error Fix Time</h1>
-        
-        <div className="flex gap-2">
-          <button
-            onClick={() => setSeverity(undefined)}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              severity === undefined
-                ? 'bg-blue-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setSeverity('error')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              severity === 'error'
-                ? 'bg-red-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Errors Only
-          </button>
-          <button
-            onClick={() => setSeverity('warning')}
-            className={`px-4 py-2 rounded-lg transition-colors ${
-              severity === 'warning'
-                ? 'bg-yellow-500 text-white'
-                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-            }`}
-          >
-            Warnings Only
-          </button>
+    <div className="space-y-4">
+      {/* Filter Buttons */}
+      <div className="flex flex-wrap gap-2 p-3 border border-vscode-panel-border rounded-lg bg-vscode-widget-bg">
+        <button
+          onClick={() => setSeverity(undefined)}
+          className={`px-3 py-1.5 text-xs rounded transition-colors ${
+            severity === undefined
+              ? 'bg-brand-primary text-white'
+              : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg border border-vscode-input-border'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setSeverity('error')}
+          className={`px-3 py-1.5 text-xs rounded transition-colors ${
+            severity === 'error'
+              ? 'bg-red-500 text-white'
+              : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg border border-vscode-input-border'
+          }`}
+        >
+          Errors Only
+        </button>
+        <button
+          onClick={() => setSeverity('warning')}
+          className={`px-3 py-1.5 text-xs rounded transition-colors ${
+            severity === 'warning'
+              ? 'bg-yellow-500 text-white'
+              : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg border border-vscode-input-border'
+          }`}
+        >
+          Warnings Only
+        </button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-2 gap-3">
+        {/* Total Count */}
+        <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-widget-bg">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-vscode-foreground opacity-75">Total Fixed</p>
+            <Activity className="text-brand-primary opacity-30" size={16} />
+          </div>
+          <p className="text-2xl font-bold text-vscode-editor-fg">{stats.totalCount}</p>
+        </div>
+
+        {/* Average Fix Time */}
+        <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-widget-bg">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-vscode-foreground opacity-75">Average Time</p>
+            <Clock className="text-purple-500 opacity-30" size={16} />
+          </div>
+          <p className="text-2xl font-bold text-vscode-editor-fg">
+            {stats.average ? formatDuration(Math.round(stats.average)) : 'N/A'}
+          </p>
+        </div>
+
+        {/* Fastest Fix */}
+        <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-widget-bg">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-vscode-foreground opacity-75">Fastest Fix</p>
+            <TrendingDown className="text-green-500 opacity-30" size={16} />
+          </div>
+          <p className="text-2xl font-bold text-vscode-editor-fg">
+            {stats.shortest ? formatDuration(stats.shortest.durationSec) : 'N/A'}
+          </p>
+        </div>
+
+        {/* Slowest Fix */}
+        <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-widget-bg">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-vscode-foreground opacity-75">Slowest Fix</p>
+            <TrendingUp className="text-orange-500 opacity-30" size={16} />
+          </div>
+          <p className="text-2xl font-bold text-vscode-editor-fg">
+            {stats.longest ? formatDuration(stats.longest.durationSec) : 'N/A'}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Count */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Total Fixed</p>
-              <p className="text-3xl font-bold mt-2">{stats.totalCount}</p>
-            </div>
-            <Activity className="w-12 h-12 text-blue-500 opacity-20" />
-          </div>
-        </Card>
-
-        {/* Average Fix Time */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Average Fix Time</p>
-              <p className="text-3xl font-bold mt-2">
-                {stats.average ? formatDuration(Math.round(stats.average)) : 'N/A'}
-              </p>
-            </div>
-            <Clock className="w-12 h-12 text-purple-500 opacity-20" />
-          </div>
-        </Card>
-
-        {/* Fastest Fix */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Fastest Fix</p>
-              <p className="text-3xl font-bold mt-2">
-                {stats.shortest ? formatDuration(stats.shortest.durationSec) : 'N/A'}
-              </p>
-            </div>
-            <TrendingDown className="w-12 h-12 text-green-500 opacity-20" />
-          </div>
-        </Card>
-
-        {/* Slowest Fix */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600">Slowest Fix</p>
-              <p className="text-3xl font-bold mt-2">
-                {stats.longest ? formatDuration(stats.longest.durationSec) : 'N/A'}
-              </p>
-            </div>
-            <TrendingUp className="w-12 h-12 text-orange-500 opacity-20" />
-          </div>
-        </Card>
-      </div>
-
       {/* Detailed Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-4">
         {/* Longest Fix Details */}
         {stats.longest && (
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
-              Longest Fix Session
-            </h2>
-            <div className="space-y-3">
+          <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingUp className="text-orange-500" size={20} strokeWidth={2} />
+              <h2 className="text-base font-semibold text-vscode-editor-fg">Longest Fix Session</h2>
+            </div>
+            <div className="bg-vscode-editor-bg border border-vscode-panel-border rounded-lg p-3 space-y-3">
               <div>
-                <p className="text-sm text-gray-600">Duration</p>
-                <p className="text-2xl font-bold text-orange-600">
+                <p className="text-xs text-vscode-foreground opacity-75">Duration</p>
+                <p className="text-xl font-bold text-orange-600">
                   {formatDuration(stats.longest.durationSec)}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Language</p>
-                <p className="font-mono">{stats.longest.language || 'Unknown'}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-xs text-vscode-foreground opacity-75">Language</p>
+                  <p className="text-sm font-mono text-vscode-editor-fg">{stats.longest.language || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-vscode-foreground opacity-75">Started</p>
+                  <p className="text-xs text-vscode-foreground">{formatTimestamp(stats.longest.startTs)}</p>
+                </div>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Started</p>
-                <p className="text-sm">{formatTimestamp(stats.longest.startTs)}</p>
+                <p className="text-xs text-vscode-foreground opacity-75">Fixed</p>
+                <p className="text-xs text-vscode-foreground">{formatTimestamp(stats.longest.endTs)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Fixed</p>
-                <p className="text-sm">{formatTimestamp(stats.longest.endTs)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Error Key</p>
-                <p className="text-xs font-mono text-gray-500 break-all">
+                <p className="text-xs text-vscode-foreground opacity-75 mb-1">Error Key</p>
+                <p className="text-[10px] font-mono text-vscode-descriptionForeground break-all">
                   {stats.longest.errorKey}
                 </p>
               </div>
             </div>
-          </Card>
+          </div>
         )}
 
         {/* Shortest Fix Details */}
         {stats.shortest && (
-          <Card className="p-6">
-            <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-              <TrendingDown className="w-5 h-5 text-green-500" />
-              Shortest Fix Session
-            </h2>
-            <div className="space-y-3">
+          <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+            <div className="flex items-center gap-2 mb-3">
+              <TrendingDown className="text-green-500" size={20} strokeWidth={2} />
+              <h2 className="text-base font-semibold text-vscode-editor-fg">Shortest Fix Session</h2>
+            </div>
+            <div className="bg-vscode-editor-bg border border-vscode-panel-border rounded-lg p-3 space-y-3">
               <div>
-                <p className="text-sm text-gray-600">Duration</p>
-                <p className="text-2xl font-bold text-green-600">
+                <p className="text-xs text-vscode-foreground opacity-75">Duration</p>
+                <p className="text-xl font-bold text-green-600">
                   {formatDuration(stats.shortest.durationSec)}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Language</p>
-                <p className="font-mono">{stats.shortest.language || 'Unknown'}</p>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <p className="text-xs text-vscode-foreground opacity-75">Language</p>
+                  <p className="text-sm font-mono text-vscode-editor-fg">{stats.shortest.language || 'Unknown'}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-vscode-foreground opacity-75">Started</p>
+                  <p className="text-xs text-vscode-foreground">{formatTimestamp(stats.shortest.startTs)}</p>
+                </div>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Started</p>
-                <p className="text-sm">{formatTimestamp(stats.shortest.startTs)}</p>
+                <p className="text-xs text-vscode-foreground opacity-75">Fixed</p>
+                <p className="text-xs text-vscode-foreground">{formatTimestamp(stats.shortest.endTs)}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-600">Fixed</p>
-                <p className="text-sm">{formatTimestamp(stats.shortest.endTs)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-600">Error Key</p>
-                <p className="text-xs font-mono text-gray-500 break-all">
+                <p className="text-xs text-vscode-foreground opacity-75 mb-1">Error Key</p>
+                <p className="text-[10px] font-mono text-vscode-descriptionForeground break-all">
                   {stats.shortest.errorKey}
                 </p>
               </div>
             </div>
-          </Card>
+          </div>
         )}
       </div>
 
       {/* Info Box */}
-      <Card className="p-6 bg-blue-50 border-blue-200">
-        <h3 className="font-semibold mb-2 text-blue-900">How it works</h3>
-        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-          <li>Tracks individual errors from appearance to resolution</li>
-          <li>Minimum duration: 60 seconds (1 minute)</li>
-          <li>Ignores flickering errors (appearing/disappearing within 2 seconds)</li>
-          <li>Joins sessions if error reappears within 5 seconds</li>
-          <li>Each error is identified by file hash, error code, and line number</li>
+      <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+        <div className="flex items-center gap-2 mb-3">
+          <Info className="text-brand-primary" size={20} strokeWidth={2} />
+          <h3 className="text-base font-semibold text-vscode-editor-fg">How it works</h3>
+        </div>
+        <ul className="text-sm text-vscode-foreground space-y-2">
+          <li className="flex items-start gap-2">
+            <span className="text-brand-primary mt-0.5">•</span>
+            <span>Tracks individual errors from appearance to resolution</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-brand-primary mt-0.5">•</span>
+            <span>Minimum duration: 60 seconds (1 minute)</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-brand-primary mt-0.5">•</span>
+            <span>Ignores flickering errors (appearing/disappearing within 2 seconds)</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-brand-primary mt-0.5">•</span>
+            <span>Joins sessions if error reappears within 5 seconds</span>
+          </li>
+          <li className="flex items-start gap-2">
+            <span className="text-brand-primary mt-0.5">•</span>
+            <span>Each error is identified by file hash, error code, and line number</span>
+          </li>
         </ul>
-      </Card>
+      </div>
     </div>
   );
 }
