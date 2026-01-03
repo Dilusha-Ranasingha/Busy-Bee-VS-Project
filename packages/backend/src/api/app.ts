@@ -6,6 +6,7 @@ import morgan from 'morgan';
 import productRoutes from '../features/products/products.routes.js';
 import fileSwitchRoutes from '../features/Metrics-Tracking/fileSwitch/fileSwitch.routes.js';
 import focusStreakRoutes from '../features/Metrics-Tracking/focusStreak/focusStreak.routes.js';
+import editSessionsRoutes from '../features/Metrics-Tracking/editSessions/editSessions.routes.js';
 import authRoutes from '../features/auth/auth.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
@@ -20,6 +21,7 @@ app.get('/api/health', (_: Request, res: Response) => res.json({ ok: true }));
 app.use('/api/products', productRoutes);
 app.use('/api/file-switch', fileSwitchRoutes);
 app.use('/api/focus-streaks', focusStreakRoutes);
+app.use('/api/edit-sessions', editSessionsRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);

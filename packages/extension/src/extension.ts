@@ -4,11 +4,13 @@ import * as vscode from 'vscode';
 import { ProductDashboardViewProvider } from './webview/ProductDashboardViewProvider';
 import { FileSwitchTracker } from './tracking/FileSwitchTracker';
 import { FocusStreakTracker } from './tracking/FocusStreakTracker';
+import { EditSessionTracker } from './tracking/EditSessionTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
 let fileSwitchTracker: FileSwitchTracker | undefined;
 let focusStreakTracker: FocusStreakTracker | undefined;
+let editSessionTracker: EditSessionTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -41,8 +43,13 @@ export function activate(context: vscode.ExtensionContext) {
 					focusStreakTracker.dispose();
 				}
 				focusStreakTracker = new FocusStreakTracker(authManager);
-				console.log('Focus Streak Tracker started');
-			} else {
+				console.log('Focus Streak Tracker started');				
+				// Start Edit Session tracker
+				if (editSessionTracker) {
+					editSessionTracker.dispose();
+				}
+				editSessionTracker = new EditSessionTracker(authManager);
+				console.log('Edit Session Tracker started');			} else {
 				console.log('[Extension] User signed out');
 				
 				// Stop tracking when signed out
@@ -53,6 +60,10 @@ export function activate(context: vscode.ExtensionContext) {
 				if (focusStreakTracker) {
 					focusStreakTracker.dispose();
 					focusStreakTracker = undefined;
+				}
+				if (editSessionTracker) {
+					editSessionTracker.dispose();
+					editSessionTracker = undefined;
 				}
 			}
 		})
@@ -68,6 +79,10 @@ export function activate(context: vscode.ExtensionContext) {
 		// Start Focus Streak tracker
 		focusStreakTracker = new FocusStreakTracker(authManager);
 		console.log('Focus Streak Tracker started (user already authenticated)');
+		
+		// Start Edit Session tracker
+		editSessionTracker = new EditSessionTracker(authManager);
+		console.log('Edit Session Tracker started (user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
@@ -146,5 +161,9 @@ export function deactivate() {
 	if (focusStreakTracker) {
 		focusStreakTracker.dispose();
 		console.log('Focus Streak Tracker stopped');
+	}
+	if (editSessionTracker) {
+		editSessionTracker.dispose();
+		console.log('Edit Session Tracker stopped');
 	}
 }

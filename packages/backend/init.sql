@@ -70,3 +70,41 @@ CREATE INDEX IF NOT EXISTS idx_focus_streaks_user_type ON focus_streaks(user_id,
 CREATE INDEX IF NOT EXISTS idx_focus_streaks_user_language ON focus_streaks(user_id, language, duration_min DESC);
 CREATE INDEX IF NOT EXISTS idx_focus_streaks_start ON focus_streaks(start_ts DESC);
 
+-- Edit Sessions table (Edits per Minute tracking)
+CREATE TABLE IF NOT EXISTS sessions_edits (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  -- Session timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  duration_min NUMERIC NOT NULL,
+  
+  -- Core metrics
+  edits_per_min NUMERIC NOT NULL,
+  insert_chars_per_min NUMERIC NOT NULL,
+  delete_chars_per_min NUMERIC NOT NULL,
+  add_delete_ratio NUMERIC NOT NULL,
+  
+  -- Total counts (for reference)
+  total_edits INT NOT NULL,
+  total_insert_chars INT NOT NULL,
+  total_delete_chars INT NOT NULL,
+  
+  -- Optional shape metrics
+  typing_burstiness_index NUMERIC,
+  burst_count INT,
+  avg_burst_len_sec NUMERIC,
+  longest_pause_min NUMERIC,
+  paste_events INT,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for performance
+CREATE INDEX IF NOT EXISTS idx_sessions_edits_user_edits ON sessions_edits(user_id, edits_per_min DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_edits_start ON sessions_edits(start_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_sessions_edits_session ON sessions_edits(session_id);
+
