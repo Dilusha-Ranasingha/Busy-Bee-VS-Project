@@ -69,9 +69,9 @@ export default function DashboardPage() {
   }, [items]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
+    <div className="space-y-4">
       {/* KPIs */}
-      <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 gap-3">
         <KpiCard title="Total Quantity" value={totals.totalQty} />
         <KpiCard title="Total Sold" value={totals.totalSold} />
         <KpiCard title="In Stock" value={totals.totalStockLeft} />
@@ -81,12 +81,11 @@ export default function DashboardPage() {
       <ChartCard
         title="Quantity by Product"
         description="Share of total inventory by product"
-        className="lg:col-span-2"
       >
         {loading ? (
           <ChartSkeleton />
         ) : items.length ? (
-          <div className="w-56 h-56 mx-auto">
+          <div className="w-full max-w-xs h-56 mx-auto">
             <Pie
               data={quantityPie}
               options={{
@@ -103,12 +102,11 @@ export default function DashboardPage() {
       <ChartCard
         title="Sold vs In Stock"
         description="Overall units sold vs current stock"
-        className="lg:col-span-1"
       >
         {loading ? (
           <ChartSkeleton />
         ) : totals.totalQty + totals.totalSold ? (
-          <div className="w-48 h-48 mx-auto">
+          <div className="w-full max-w-xs h-48 mx-auto">
             <Doughnut
               data={soldVsStockDoughnut}
               options={{

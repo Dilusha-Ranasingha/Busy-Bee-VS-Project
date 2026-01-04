@@ -64,41 +64,38 @@ export default function AddProductPage() {
               required
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Price"
-                name="price"
-                value={form.price}
-                onChange={handleChange}
-                placeholder="0.00"
-                type="number"
-                min="0"
-                step="0.01"
-                required
-              />
-              <Input
-                label="Quantity"
-                name="quantity"
-                value={form.quantity}
-                onChange={handleChange}
-                placeholder="0"
-                type="number"
-                min="0"
-                required
-              />
-            </div>
+            <Input
+              label="Price"
+              name="price"
+              value={form.price}
+              onChange={handleChange}
+              placeholder="0.00"
+              type="number"
+              min="0"
+              step="0.01"
+              required
+            />
+            
+            <Input
+              label="Quantity"
+              name="quantity"
+              value={form.quantity}
+              onChange={handleChange}
+              placeholder="0"
+              type="number"
+              min="0"
+              required
+            />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Input
-                label="Sold Count"
-                name="soldCount"
-                value={form.soldCount}
-                onChange={handleChange}
-                placeholder="0"
-                type="number"
-                min="0"
-              />
-            </div>
+            <Input
+              label="Sold Count"
+              name="soldCount"
+              value={form.soldCount}
+              onChange={handleChange}
+              placeholder="0"
+              type="number"
+              min="0"
+            />
 
             <Textarea
               label="Description"

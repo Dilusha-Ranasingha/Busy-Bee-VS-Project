@@ -16,6 +16,18 @@
       {
         "command": "busy-bee-vs.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "busy-bee-vs.signIn",
+        "title": "Busy Bee: Sign in with GitHub"
+      },
+      {
+        "command": "busy-bee-vs.signOut",
+        "title": "Busy Bee: Sign out"
+      },
+      {
+        "command": "busy-bee-vs.showFileSwitchStats",
+        "title": "Busy Bee: Show File Switch Stats"
       }
     ],
     "viewsContainers": {
@@ -65,5 +77,8 @@
     "typescript": "^5.9.3",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2"
+  },
+  "dependencies": {
+    "axios": "^1.7.9"
   }
 }
