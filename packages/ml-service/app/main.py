@@ -1,7 +1,7 @@
 import os
 import json
 from datetime import date, datetime, timedelta
-from typing import List, Optional, Dict, Any
+from typing import List, Tuple, Optional, Dict, Any
 
 import numpy as np
 import joblib
@@ -221,6 +221,54 @@ def build_feature_row(hist: List[Dict[str, Any]], idx: int, next_day: date) -> D
 
     return row
 
+def get_global_feature_importance(top_n: int = 10):
+    """
+    Returns global importance as a sorted list:
+    [{"feature": "...", "importance": 0.123}, ...]
+    """
+    booster = MODEL.get_booster()
+    score = booster.get_score(importance_type="gain")  # gain is good default
+
+    # Ensure every feature appears even if missing in dict
+    feature_cols = MODEL_META.get("features", [])
+    items = []
+    for f in feature_cols:
+        items.append({"feature": f, "importance": float(score.get(f, 0.0))})
+
+    items.sort(key=lambda x: x["importance"], reverse=True)
+    return items[:top_n]
+
+
+def get_local_approx_impacts(feature_row: Dict[str, float], top_n: int = 10):
+    """
+    Simple, non-technical "impact" approximation:
+    impact ~ normalized_importance * feature_value
+    This is NOT SHAP, but it is explainable and good for UI/viva.
+    """
+    global_imp = get_global_feature_importance(top_n=9999)
+    imp_map = {x["feature"]: x["importance"] for x in global_imp}
+
+    # normalize importances to 0..1 (avoid division by 0)
+    max_imp = max(imp_map.values()) if imp_map else 1.0
+    if max_imp <= 0:
+        max_imp = 1.0
+
+    impacts = []
+    for feat, value in feature_row.items():
+        norm_imp = float(imp_map.get(feat, 0.0)) / max_imp
+        impacts.append(
+            {
+                "feature": feat,
+                "value": float(value),
+                "importanceNorm": round(norm_imp, 4),
+                "approxImpact": round(norm_imp * float(value), 4),
+            }
+        )
+
+    # Sort by absolute approx impact
+    impacts.sort(key=lambda x: abs(x["approxImpact"]), reverse=True)
+    return impacts[:top_n]
+
 
 # ----------------------------
 # Save predictions to DB (forecast_daily_productivity)
@@ -343,3 +391,49 @@ def predict(req: PredictRequest):
         points=points,
         note="Advanced XGBoost forecast saved to DB (focus + idle + error + day/night).",
     )
+
+@app.get("/explain/{userId}")
+def explain(userId: str, days: int = 7, top: int = 8):
+    """
+    Explainability endpoint (XGBoost):
+    - Global top features (gain importance)
+    - Local approximation for next-day prediction based on latest available day
+    """
+    if MODEL is None:
+        raise HTTPException(status_code=500, detail="Model not loaded")
+
+    days = max(1, min(int(days), 7))
+    top = max(3, min(int(top), 15))
+
+    hist = fetch_recent_joined_history(userId, limit_days=120)
+    if len(hist) < 20:
+        raise HTTPException(status_code=400, detail="Not enough history to explain (need ~20+ days).")
+
+    # Explain for "next day after latest actual"
+    idx = len(hist) - 1
+    current_date = hist[idx]["date"]
+    next_date = current_date + timedelta(days=1)
+
+    feature_cols = MODEL_META.get("features", [])
+    feat_row = build_feature_row(hist, idx, next_date)
+
+    X = np.array([[feat_row.get(c, float("nan")) for c in feature_cols]], dtype=float)
+    if np.isnan(X).any():
+        raise HTTPException(
+            status_code=400,
+            detail="Cannot explain because some model features are missing/NaN.",
+        )
+
+    yhat = float(MODEL.predict(X)[0])
+
+    global_top = get_global_feature_importance(top_n=top)
+    local_top = get_local_approx_impacts(feat_row, top_n=top)
+
+    return {
+        "userId": userId,
+        "explainedForDate": next_date.isoformat(),
+        "predictedProductiveMinutes": int(max(0, round(yhat))),
+        "globalTopFeatures": global_top,
+        "localApproxTop": local_top,
+        "note": "Global importance uses XGBoost gain. LocalApprox is a simple importance×value approximation (not SHAP).",
+    }
