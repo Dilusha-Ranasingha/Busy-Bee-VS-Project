@@ -8,6 +8,8 @@ import { errorHandler } from '../middlewares/error.js';
 //forecasting routes
 import forecastingRoutes from '../features/forecasting/forecasting.routes.js';
 import forecastInsightsRoutes from '../features/forecasting/forecastInsights.routes.js';
+import planningRoutes from '../features/forecasting/planning.routes.js';
+
 
 
 
@@ -23,6 +25,7 @@ app.use('/api/products', productRoutes);
 //forecasting routes
 app.use('/api/forecasting', forecastingRoutes);
 app.use('/api/forecasting', forecastInsightsRoutes);
+app.use('/api/forecasting', planningRoutes);
 
 
 
