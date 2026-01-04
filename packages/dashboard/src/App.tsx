@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle } from 'lucide-react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
@@ -9,10 +9,11 @@ import { EditSessionsPage } from './pages/Metrics-Tracking/EditSessions';
 import { SaveEditRatioPage } from './pages/Metrics-Tracking/SaveEditRatio';
 import { DiagnosticDensityPage } from './pages/Metrics-Tracking/DiagnosticDensity';
 import { ErrorFixTimePage } from './pages/Metrics-Tracking/ErrorFixTime';
+import { TaskRunsPage } from './pages/Metrics-Tracking/TaskRuns';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { id: 'saveedit', label: 'Save/Edit Ratio', icon: Save },
   { id: 'diagnostics', label: 'Diagnostics', icon: AlertCircle },
   { id: 'errorfix', label: 'Error Fix Time', icon: Clock },
+  { id: 'taskruns', label: 'Task Runs', icon: PlayCircle },
 ];
 
 export default function App() {
@@ -62,6 +64,7 @@ export default function App() {
             {tab === 'saveedit' && <SaveEditRatioPage />}
             {tab === 'diagnostics' && <DiagnosticDensityPage />}
             {tab === 'errorfix' && <ErrorFixTimePage />}
+            {tab === 'taskruns' && <TaskRunsPage />}
           </div>
         </main>
       </div>

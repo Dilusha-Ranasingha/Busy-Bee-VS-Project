@@ -8,6 +8,7 @@ import { EditSessionTracker } from './tracking/EditSessionTracker';
 import { SaveEditSessionTracker } from './tracking/SaveEditSessionTracker';
 import { DiagnosticDensityTracker } from './tracking/DiagnosticDensityTracker';
 import { ErrorFixTimeTracker } from './tracking/ErrorFixTimeTracker';
+import { TaskRunsTracker } from './tracking/TaskRunsTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
@@ -17,6 +18,7 @@ let editSessionTracker: EditSessionTracker | undefined;
 let saveEditSessionTracker: SaveEditSessionTracker | undefined;
 let diagnosticDensityTracker: DiagnosticDensityTracker | undefined;
 let errorFixTimeTracker: ErrorFixTimeTracker | undefined;
+let taskRunsTracker: TaskRunsTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -83,6 +85,16 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.workspace.workspaceFolders?.[0]
 				);
 				console.log('Error Fix Time Tracker started');
+				
+				// Start Task Runs tracker
+				if (taskRunsTracker) {
+					taskRunsTracker.dispose();
+				}
+				taskRunsTracker = new TaskRunsTracker(
+					authManager,
+					vscode.workspace.workspaceFolders?.[0]
+				);
+				console.log('Task Runs Tracker started');
 			} else {
 				console.log('[Extension] User signed out');
 				
@@ -110,6 +122,10 @@ export function activate(context: vscode.ExtensionContext) {
 				if (errorFixTimeTracker) {
 					errorFixTimeTracker.dispose();
 					errorFixTimeTracker = undefined;
+				}
+				if (taskRunsTracker) {
+					taskRunsTracker.dispose();
+					taskRunsTracker = undefined;
 				}
 			}
 		})
@@ -147,6 +163,13 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.workspace.workspaceFolders?.[0]
 		);
 		console.log('Error Fix Time Tracker started (user already authenticated)');
+		
+		// Start Task Runs tracker
+		taskRunsTracker = new TaskRunsTracker(
+			authManager,
+			vscode.workspace.workspaceFolders?.[0]
+		);
+		console.log('Task Runs Tracker started (user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
@@ -241,5 +264,9 @@ export function deactivate() {
 	if (errorFixTimeTracker) {
 		errorFixTimeTracker.dispose();
 		console.log('Error Fix Time Tracker stopped');
+	}
+	if (taskRunsTracker) {
+		taskRunsTracker.dispose();
+		console.log('Task Runs Tracker stopped');
 	}
 }

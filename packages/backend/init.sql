@@ -213,3 +213,34 @@ CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_user ON error_fix_sessions(use
 CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_duration ON error_fix_sessions(user_id, duration_sec DESC);
 CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_severity ON error_fix_sessions(user_id, severity);
 
+-- Task Runs (Build/Test) - Per-Run Tracking with Live Counters
+CREATE TABLE IF NOT EXISTS task_runs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  user_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  -- Task identification
+  label TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('test', 'build')),
+  
+  -- Timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  duration_sec INT NOT NULL,
+  
+  -- Result
+  result TEXT NOT NULL CHECK (result IN ('pass', 'fail', 'cancelled')),
+  
+  -- Optional metadata
+  pid INT,
+  is_watch_like BOOLEAN DEFAULT FALSE,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for task run queries
+CREATE INDEX IF NOT EXISTS idx_task_runs_user ON task_runs(user_id, start_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_task_runs_kind ON task_runs(user_id, kind, result);
+CREATE INDEX IF NOT EXISTS idx_task_runs_result ON task_runs(user_id, result);
+

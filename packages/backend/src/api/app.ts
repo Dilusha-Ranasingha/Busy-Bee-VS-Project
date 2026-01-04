@@ -10,6 +10,7 @@ import editSessionsRoutes from '../features/Metrics-Tracking/editSessions/editSe
 import saveEditSessionsRoutes from '../features/Metrics-Tracking/saveEditSessions/saveEditSessions.routes.js';
 import diagnosticDensityRoutes from '../features/Metrics-Tracking/diagnosticDensity/diagnosticDensity.routes.js';
 import errorFixTimeRoutes from '../features/Metrics-Tracking/errorFixTime/errorFixTime.routes.js';
+import taskRunsRoutes from '../features/Metrics-Tracking/taskRuns/taskRuns.routes.js';
 import authRoutes from '../features/auth/auth.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
@@ -28,6 +29,7 @@ app.use('/api/edit-sessions', editSessionsRoutes);
 app.use('/api/save-edit-sessions', saveEditSessionsRoutes);
 app.use('/api/diagnostic-density', diagnosticDensityRoutes);
 app.use('/api/error-fix-time', errorFixTimeRoutes);
+app.use('/api/task-runs', taskRunsRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);
