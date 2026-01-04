@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS daily_focus_summary (
 
 -- =====================================================
 -- FORECASTING MODULE OUTPUT
--- Your ML Predictions table (optional to use later)
+-- ML Predictions table
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS forecast_daily_productivity (
@@ -65,10 +65,13 @@ CREATE TABLE IF NOT EXISTS forecast_daily_productivity (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Prevent duplicates for same user/day/model/horizon
+CREATE UNIQUE INDEX IF NOT EXISTS uq_forecast_user_date_model_horizon
+ON forecast_daily_productivity(user_id, target_date, model_version, horizon_days);
+
 
 -- =====================================================
--- KPI PLACEHOLDER TABLE #1 (Member 01 -> Idle sessions)
--- Daily Idle Summary (direct session-based)
+-- KPI PLACEHOLDER TABLE #1 (Idle sessions)
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS daily_idle_summary (
@@ -87,8 +90,7 @@ CREATE TABLE IF NOT EXISTS daily_idle_summary (
 
 
 -- =====================================================
--- KPI PLACEHOLDER TABLE #2 (Member 01 -> Error fix sessions)
--- Daily Error Summary
+-- KPI PLACEHOLDER TABLE #2 (Error fix sessions)
 -- =====================================================
 
 CREATE TABLE IF NOT EXISTS daily_error_summary (
@@ -107,8 +109,29 @@ CREATE TABLE IF NOT EXISTS daily_error_summary (
 
 
 -- =====================================================
+-- KPI PLACEHOLDER TABLE #3 (Time-of-day focus)
+-- This is the "day vs night focus" table you asked for
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS daily_time_focus_summary (
+    user_id VARCHAR(100) NOT NULL,
+    date DATE NOT NULL,
+
+    day_focus_minutes INTEGER NOT NULL DEFAULT 0,
+    night_focus_minutes INTEGER NOT NULL DEFAULT 0,
+
+    day_sessions INTEGER NOT NULL DEFAULT 0,
+    night_sessions INTEGER NOT NULL DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_daily_time_focus_summary PRIMARY KEY (user_id, date)
+);
+
+
+-- =====================================================
 -- SEED DATA (30 days) - testUser
--- This gives enough history for XGBoost lags/rolling features
+-- Enough history for lags + rolling features
 -- =====================================================
 
 -- Focus seed: 2025-12-01 .. 2025-12-30
@@ -120,8 +143,8 @@ SELECT
   d::date AS date,
   (
     CASE
-      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 85  -- weekend lower
-      ELSE 120 + (EXTRACT(DOW FROM d)::int * 4)  -- weekday pattern
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 85
+      ELSE 120 + (EXTRACT(DOW FROM d)::int * 4)
     END
   )::int AS total_focus_minutes,
   (
@@ -140,7 +163,7 @@ FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') A
 ON CONFLICT (user_id, date) DO NOTHING;
 
 
--- Idle seed: correlated (higher idle on weekend, moderate weekdays)
+-- Idle seed
 INSERT INTO daily_idle_summary (
     user_id, date, idle_minutes, idle_sessions, avg_idle_session_min, longest_idle_session_min
 )
@@ -175,7 +198,7 @@ FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') A
 ON CONFLICT (user_id, date) DO NOTHING;
 
 
--- Error seed: more errors on some weekdays, less on weekends
+-- Error seed
 INSERT INTO daily_error_summary (
     user_id, date, error_count, avg_fix_time_min, total_fix_time_min, long_fix_count
 )
@@ -218,5 +241,41 @@ SELECT
       ELSE 0
     END
   )::int AS long_fix_count
+FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') AS d
+ON CONFLICT (user_id, date) DO NOTHING;
+
+
+-- Time-of-day seed (day vs night)
+-- We simulate that weekdays have more day-focus; weekends more night-focus.
+INSERT INTO daily_time_focus_summary (
+    user_id, date, day_focus_minutes, night_focus_minutes, day_sessions, night_sessions
+)
+SELECT
+  'testUser' AS user_id,
+  d::date AS date,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 30
+      ELSE 80 + (EXTRACT(DOW FROM d)::int * 3)
+    END
+  )::int AS day_focus_minutes,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 55
+      ELSE 40 + (EXTRACT(DOW FROM d)::int * 1)
+    END
+  )::int AS night_focus_minutes,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 1
+      ELSE 3
+    END
+  )::int AS day_sessions,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 3
+      ELSE 2
+    END
+  )::int AS night_sessions
 FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') AS d
 ON CONFLICT (user_id, date) DO NOTHING;
