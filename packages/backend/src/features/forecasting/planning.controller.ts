@@ -247,7 +247,7 @@ export async function createPlan(req: Request, res: Response) {
       userId,
       period,
       horizonDays,
-      targetHours: roundToHalfHours(targetHoursRaw),
+      targetHours: targetHoursRounded,
       feasible,
       suggestedTargetHours,
       bestWindow,
