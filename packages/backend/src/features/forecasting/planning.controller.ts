@@ -271,10 +271,10 @@ export async function createPlan(req: Request, res: Response) {
 
     const chatMessage =
     feasible
-        ? `✅ Your target looks doable. ${reason} ${planLine} Suggested slots: ${recommendedSlots
+        ? `Your target looks doable. ${reason} ${planLine} Suggested slots: ${recommendedSlots
             .map(s => `${s.label} (${s.start}–${s.end})`)
             .join(" or ")}`
-        : `⚠️ Your target is a bit high. ${reason} Try this instead: ${planLine} Suggested slots: ${recommendedSlots
+        : `Your target is a bit high. ${reason} Try this instead: ${planLine} Suggested slots: ${recommendedSlots
             .map(s => `${s.label} (${s.start}–${s.end})`)
             .join(" or ")}`;
 
