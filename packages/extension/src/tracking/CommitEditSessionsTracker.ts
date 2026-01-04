@@ -17,6 +17,7 @@ export class CommitEditSessionsTracker {
   private disposables: vscode.Disposable[] = [];
   private activeSession: ActiveSession | null = null;
   private gitExtension: any;
+  private lastCommitSha: string | null = null; // Track last commit to detect new commits
 
   constructor(
     private authManager: AuthManager,
@@ -101,9 +102,28 @@ export class CommitEditSessionsTracker {
       return;
     }
 
-    // If we have an active session with edits, save it
+    const currentCommitSha = head.commit;
+
+    // Only process if this is a NEW commit (SHA changed)
+    if (this.lastCommitSha === currentCommitSha) {
+      return; // Same commit, ignore
+    }
+
+    // Update last commit SHA
+    const previousCommitSha = this.lastCommitSha;
+    this.lastCommitSha = currentCommitSha;
+
+    // Skip the first commit detection (when we initialize)
+    if (previousCommitSha === null) {
+      console.log(`[CommitEditSessions] Initial commit detected: ${currentCommitSha.substring(0, 7)}`);
+      return;
+    }
+
+    // A new commit was made! Save the session if we have edits
+    console.log(`[CommitEditSessions] New commit detected: ${currentCommitSha.substring(0, 7)}`);
+    
     if (this.activeSession && this.activeSession.edits > 0) {
-      await this.saveSession(repo, head.commit);
+      await this.saveSession(repo, currentCommitSha);
       // Start a new session
       this.startNewSession();
     }
