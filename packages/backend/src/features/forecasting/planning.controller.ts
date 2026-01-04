@@ -64,6 +64,26 @@ async function getBestWindow(userId: string): Promise<"day" | "night" | "mixed">
   return daySum > nightSum ? "day" : "night";
 }
 
+function getRecommendedSlots(bestWindow: "day" | "night" | "mixed") {
+  if (bestWindow === "day") {
+    return [
+      { label: "Morning deep work", start: "09:00", end: "11:00" },
+      { label: "Late morning", start: "11:30", end: "13:30" },
+    ];
+  }
+  if (bestWindow === "night") {
+    return [
+      { label: "Evening focus", start: "19:30", end: "21:30" },
+      { label: "Late night sprint", start: "22:00", end: "00:00" },
+    ];
+  }
+  return [
+    { label: "Day option", start: "10:00", end: "12:00" },
+    { label: "Night option", start: "20:00", end: "22:00" },
+  ];
+}
+
+
 async function getLatestForecast(userId: string, horizonDays: number) {
   // Pick the latest record per day (created_at differs per row)
   const forecastRows = await query(
@@ -168,6 +188,7 @@ export async function createPlan(req: Request, res: Response) {
     }
 
     const bestWindow = await getBestWindow(userId);
+    const recommendedSlots = getRecommendedSlots(bestWindow);
     const maxHoursPerDay = 6;
 
     // ✅ IMPORTANT FIX:
@@ -243,6 +264,20 @@ export async function createPlan(req: Request, res: Response) {
             buffer * 100
           )}%, confidence: ${confidence}), a realistic target is about ${suggestedTargetHours} hours.`;
 
+    const planLine =
+    period === "day"
+        ? `Plan: ${plan[0].hours}h in the ${bestWindow} window.`
+        : `Plan: ${plan.map(p => `${p.date}: ${p.hours}h`).join(", ")}.`;
+
+    const chatMessage =
+    feasible
+        ? `✅ Your target looks doable. ${reason} ${planLine} Suggested slots: ${recommendedSlots
+            .map(s => `${s.label} (${s.start}–${s.end})`)
+            .join(" or ")}`
+        : `⚠️ Your target is a bit high. ${reason} Try this instead: ${planLine} Suggested slots: ${recommendedSlots
+            .map(s => `${s.label} (${s.start}–${s.end})`)
+            .join(" or ")}`;
+
     return res.json({
       userId,
       period,
@@ -257,6 +292,8 @@ export async function createPlan(req: Request, res: Response) {
       plan,
       unallocatedMinutes,
       reason,
+      recommendedSlots,
+      chatMessage,
       note: "Planning engine uses latest saved 7-day forecast + confidence buffer + 6h/day cap.",
     });
   } catch (err) {
