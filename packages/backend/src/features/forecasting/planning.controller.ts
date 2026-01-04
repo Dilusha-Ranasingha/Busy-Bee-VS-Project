@@ -11,6 +11,16 @@ function clamp(num: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, num));
 }
 
+function toISODateOnly(value: any): string {
+  // Handles Date objects or strings.
+  // Always output "YYYY-MM-DD".
+  const d = value instanceof Date ? value : new Date(value);
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const dd = String(d.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 function computeConfidenceFromIntervals(preds: number[], widths: (number | null)[]): "high" | "medium" | "low" {
   const validWidths = widths.filter((w) => w != null) as number[];
   if (validWidths.length === 0) return "medium";
@@ -25,7 +35,6 @@ function computeConfidenceFromIntervals(preds: number[], widths: (number | null)
 }
 
 function bufferByConfidence(conf: "high" | "medium" | "low"): number {
-  // buffer % of capacity we keep as safety
   if (conf === "high") return 0.05;
   if (conf === "medium") return 0.10;
   return 0.15;
@@ -56,7 +65,7 @@ async function getBestWindow(userId: string): Promise<"day" | "night" | "mixed">
 }
 
 async function getLatestForecast(userId: string, horizonDays: number) {
-  // ✅ Important: because created_at can differ per row, we pick latest per target_date
+  // Pick the latest record per day (created_at differs per row)
   const forecastRows = await query(
     `
     WITH latest_per_day AS (
@@ -79,7 +88,7 @@ async function getLatestForecast(userId: string, horizonDays: number) {
   );
 
   return forecastRows.rows.map((r: any) => ({
-    date: String(r.target_date),
+    date: toISODateOnly(r.target_date),
     predicted: Number(r.predicted_focus_minutes),
     lower: r.lower_bound == null ? null : Number(r.lower_bound),
     upper: r.upper_bound == null ? null : Number(r.upper_bound),
@@ -95,7 +104,6 @@ function allocateWeekPlan(
   maxHoursPerDay: number,
   bestWindow: "day" | "night" | "mixed"
 ) {
-  const n = dates.length;
   const maxPerDayMin = maxHoursPerDay * 60;
 
   const totalCap = capacityMinutes.reduce((a, b) => a + b, 0);
@@ -106,15 +114,14 @@ function allocateWeekPlan(
     };
   }
 
-  // Initial proportional allocation (then cap)
+  // Proportional allocation then cap
   let alloc = capacityMinutes.map((cap) => Math.round((cap / totalCap) * targetMinutes));
   alloc = alloc.map((m) => clamp(m, 0, maxPerDayMin));
 
   let allocated = alloc.reduce((a, b) => a + b, 0);
   let remaining = targetMinutes - allocated;
 
-  // Distribute remaining minutes (greedy) to days that still have room
-  // priority: higher capacity days first
+  // Greedy distribute remaining in 30-min chunks to highest-capacity days
   const order = capacityMinutes
     .map((cap, i) => ({ cap, i }))
     .sort((a, b) => b.cap - a.cap)
@@ -127,15 +134,14 @@ function allocateWeekPlan(
       const room = maxPerDayMin - alloc[i];
       if (room <= 0) continue;
 
-      const add = Math.min(room, remaining, 30); // add in 30-min chunks
+      const add = Math.min(room, remaining, 30);
       alloc[i] += add;
       remaining -= add;
       progressed = true;
 
       if (remaining <= 0) break;
     }
-
-    if (!progressed) break; // no room anywhere
+    if (!progressed) break;
   }
 
   const plan = dates.map((d, i) => ({
@@ -161,20 +167,25 @@ export async function createPlan(req: Request, res: Response) {
       return res.status(400).json({ message: "targetHours must be a positive number." });
     }
 
-    const horizonDays = period === "day" ? 1 : 7;
+    const bestWindow = await getBestWindow(userId);
+    const maxHoursPerDay = 6;
 
-    // Pull latest forecast (must exist)
-    const forecast = await getLatestForecast(userId, horizonDays);
-    if (forecast.length === 0) {
+    // ✅ IMPORTANT FIX:
+    // Always read the latest 7-day forecast from DB.
+    // - For period=week → use all 7 days
+    // - For period=day  → use the first day only (tomorrow)
+    const forecast7 = await getLatestForecast(userId, 7);
+    if (forecast7.length === 0) {
       return res.status(404).json({
-        message: "No saved forecast found. Generate forecast first using GET /api/forecasting/:userId?days=7",
+        message: "No saved 7-day forecast found. Generate forecast first using GET /api/forecasting/:userId?days=7",
         userId,
         period,
-        horizonDays,
       });
     }
 
-    // Use all returned rows (1 or 7)
+    const horizonDays = period === "day" ? 1 : 7;
+    const forecast = period === "day" ? [forecast7[0]] : forecast7.slice(0, 7);
+
     const dates = forecast.map((f) => f.date);
     const preds = forecast.map((f) => f.predicted);
 
@@ -184,18 +195,12 @@ export async function createPlan(req: Request, res: Response) {
     });
 
     const confidence = computeConfidenceFromIntervals(preds, widths);
-    const buffer = bufferByConfidence(confidence); // e.g. 0.15
-    const bestWindow = await getBestWindow(userId);
+    const buffer = bufferByConfidence(confidence);
 
-    // Capacity (buffered) based on predicted minutes
-    const capacityMinutesRaw = preds;
-    const capacityMinutesBuffered = capacityMinutesRaw.map((m) => Math.max(0, Math.floor(m * (1 - buffer))));
-
+    const capacityMinutesBuffered = preds.map((m) => Math.max(0, Math.floor(m * (1 - buffer))));
     const totalCapacity = capacityMinutesBuffered.reduce((a, b) => a + b, 0);
-    const targetMinutes = Math.round(targetHoursRaw * 60);
 
-    // Set max hours/day (research-friendly constraint)
-    const maxHoursPerDay = period === "day" ? 6 : 6;
+    const targetMinutes = Math.round(targetHoursRaw * 60);
 
     const maxPossibleMinutes = Math.min(
       totalCapacity,
@@ -203,17 +208,14 @@ export async function createPlan(req: Request, res: Response) {
     );
 
     const feasible = targetMinutes <= maxPossibleMinutes;
-
-    // Suggested target if not feasible
     const suggestedTargetHours = roundToHalfHours(maxPossibleMinutes / 60);
 
-    // Build plan
     let plan: Array<{ date: string; hours: number; window: "day" | "night" | "mixed" }>;
     let unallocatedMinutes = 0;
 
     if (period === "day") {
-      const hours = roundTo_toggle(roundToHalfHours(Math.min(targetMinutes, maxPossibleMinutes) / 60));
-      plan = [{ date: dates[0], hours, window: bestWindow }];
+      const allowed = Math.min(targetMinutes, maxPossibleMinutes);
+      plan = [{ date: dates[0], hours: roundToHalfHours(allowed / 60), window: bestWindow }];
     } else {
       const alloc = allocateWeekPlan(
         dates,
@@ -226,12 +228,16 @@ export async function createPlan(req: Request, res: Response) {
       unallocatedMinutes = alloc.unallocatedMinutes;
     }
 
-    // Reason text (non-technical)
     const capacityHours = roundToHalfHours(totalCapacity / 60);
+
     const reason =
       feasible
-        ? `Your forecast capacity for this ${period} is about ${capacityHours} hours (with a safety buffer because confidence is ${confidence}).`
-        : `Your target is higher than your forecast capacity for this ${period}. With a safety buffer (confidence: ${confidence}), a realistic target is about ${suggestedTargetHours} hours.`;
+        ? `Your forecast capacity for this ${period} is about ${capacityHours} hours (safety buffer: ${Math.round(
+            buffer * 100
+          )}%, confidence: ${confidence}).`
+        : `Your target is higher than your forecast capacity for this ${period}. With a safety buffer (${Math.round(
+            buffer * 100
+          )}%, confidence: ${confidence}), a realistic target is about ${suggestedTargetHours} hours.`;
 
     return res.json({
       userId,
@@ -239,7 +245,7 @@ export async function createPlan(req: Request, res: Response) {
       horizonDays,
       targetHours: roundToHalfHours(targetHoursRaw),
       feasible,
-      suggestedTargetHours: suggestedTargetHours,
+      suggestedTargetHours,
       bestWindow,
       confidence,
       bufferAppliedPercent: Math.round(buffer * 100),
@@ -247,15 +253,10 @@ export async function createPlan(req: Request, res: Response) {
       plan,
       unallocatedMinutes,
       reason,
-      note: "Planning engine uses saved forecast + confidence-based buffer + max hours/day cap.",
+      note: "Planning engine uses latest saved 7-day forecast + confidence buffer + 6h/day cap.",
     });
   } catch (err) {
     console.error("Planning error:", err);
     return res.status(500).json({ message: "Failed to create plan" });
   }
-}
-
-// small helper to avoid TS lint complaining in day plan
-function roundTo_toggle(v: number) {
-  return v;
 }
