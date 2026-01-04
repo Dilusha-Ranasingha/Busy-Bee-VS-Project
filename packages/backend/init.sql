@@ -244,3 +244,39 @@ CREATE INDEX IF NOT EXISTS idx_task_runs_user ON task_runs(user_id, start_ts DES
 CREATE INDEX IF NOT EXISTS idx_task_runs_kind ON task_runs(user_id, kind, result);
 CREATE INDEX IF NOT EXISTS idx_task_runs_result ON task_runs(user_id, result);
 
+-- Commit-per-Edit Sessions (Edits before Commit)
+CREATE TABLE IF NOT EXISTS commit_edit_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  session_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  -- Timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  time_to_commit_min NUMERIC NOT NULL,
+  
+  -- Edit metrics
+  edits_per_commit INT NOT NULL CHECK (edits_per_commit > 0),
+  chars_added_per_commit INT NOT NULL DEFAULT 0,
+  chars_deleted_per_commit INT NOT NULL DEFAULT 0,
+  
+  -- Commit metadata
+  files_in_commit INT NOT NULL DEFAULT 0,
+  lines_added INT,
+  lines_deleted INT,
+  repo_id TEXT,
+  commit_sha TEXT,
+  
+  -- Status
+  aborted BOOLEAN DEFAULT FALSE,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for commit-edit session queries
+CREATE INDEX IF NOT EXISTS idx_commit_edit_sessions_user ON commit_edit_sessions(user_id, start_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_commit_edit_sessions_edits ON commit_edit_sessions(user_id, edits_per_commit DESC);
+CREATE INDEX IF NOT EXISTS idx_commit_edit_sessions_today ON commit_edit_sessions(user_id, start_ts) WHERE aborted = FALSE;
+

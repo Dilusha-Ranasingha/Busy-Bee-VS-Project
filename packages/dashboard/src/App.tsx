@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle, GitCommit } from 'lucide-react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
@@ -10,10 +10,11 @@ import { SaveEditRatioPage } from './pages/Metrics-Tracking/SaveEditRatio';
 import { DiagnosticDensityPage } from './pages/Metrics-Tracking/DiagnosticDensity';
 import { ErrorFixTimePage } from './pages/Metrics-Tracking/ErrorFixTime';
 import { TaskRunsPage } from './pages/Metrics-Tracking/TaskRuns';
+import { CommitEditSessionsPage } from './pages/Metrics-Tracking/CommitEditSessions';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -26,6 +27,7 @@ const NAV_ITEMS = [
   { id: 'diagnostics', label: 'Diagnostics', icon: AlertCircle },
   { id: 'errorfix', label: 'Error Fix Time', icon: Clock },
   { id: 'taskruns', label: 'Task Runs', icon: PlayCircle },
+  { id: 'commitedits', label: 'Commit Edits', icon: GitCommit },
 ];
 
 export default function App() {
@@ -65,6 +67,7 @@ export default function App() {
             {tab === 'diagnostics' && <DiagnosticDensityPage />}
             {tab === 'errorfix' && <ErrorFixTimePage />}
             {tab === 'taskruns' && <TaskRunsPage />}
+            {tab === 'commitedits' && <CommitEditSessionsPage />}
           </div>
         </main>
       </div>
