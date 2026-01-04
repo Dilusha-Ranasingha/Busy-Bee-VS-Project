@@ -1,9 +1,8 @@
-import { Card } from '../../../components/ui/Card';
 import { LoadingSpinner } from '../../../components/ui/LoadingSpinner';
 import { useIdleSessions } from '../../../hooks/useIdleSessions';
 import { useAuth } from '../../../contexts/AuthContext';
 import { SignInPrompt } from '../../../components/Auth/GitHubAuth';
-import { Coffee, TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { Coffee, TrendingUp, TrendingDown, Info, AlertCircle, CheckCircle2 } from 'lucide-react';
 
 export default function IdleSessionsPage() {
   const { user, isLoading: authLoading } = useAuth();
@@ -11,7 +10,7 @@ export default function IdleSessionsPage() {
 
   if (authLoading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-[400px]">
         <LoadingSpinner />
       </div>
     );
@@ -23,7 +22,7 @@ export default function IdleSessionsPage() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center min-h-[400px]">
         <LoadingSpinner />
       </div>
     );
@@ -31,16 +30,17 @@ export default function IdleSessionsPage() {
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-red-500">Error loading stats: {error.message}</p>
+      <div className="p-3 rounded-lg border border-vscode-input-error-border bg-vscode-input-error-bg text-vscode-input-error-fg text-sm">
+        Error loading stats: {error.message}
       </div>
     );
   }
 
   if (!stats) {
     return (
-      <div className="flex justify-center items-center h-screen">
-        <p className="text-gray-500">No idle session data available</p>
+      <div className="border border-vscode-panel-border rounded-lg p-4 bg-vscode-editor-bg text-center">
+        <Coffee className="mx-auto mb-2 text-vscode-descriptionForeground" size={32} />
+        <p className="text-sm text-vscode-descriptionForeground">No idle session data available</p>
       </div>
     );
   }
@@ -72,133 +72,144 @@ export default function IdleSessionsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Idle Time (Distraction Detection)</h1>
-      </div>
-
+    <div className="space-y-4">
       {/* Info Banner */}
-      <Card className="p-4 bg-blue-50 border-blue-200">
-        <div className="flex items-start gap-3">
-          <Coffee className="w-5 h-5 text-blue-600 mt-0.5" />
-          <div className="text-sm text-blue-800">
+      <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-widget-bg">
+        <div className="flex items-start gap-2">
+          <Coffee className="text-brand-primary flex-shrink-0 mt-0.5" size={16} />
+          <div className="text-xs text-vscode-foreground">
             <p className="font-semibold mb-1">Tracking idle periods ≥15 minutes</p>
-            <p>Idle time starts when there's no VS Code activity (edits, navigation, tasks, debug, etc.) for 15+ minutes. It ends when you resume any activity.</p>
+            <p className="opacity-75">Idle time starts when there's no VS Code activity for 15+ minutes. It ends when you resume any activity.</p>
           </div>
         </div>
-      </Card>
+      </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="space-y-3">
         {/* Longest Idle */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-orange-500" />
-              Longest Idle Session
-            </h2>
+        <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingUp className="text-orange-500" size={20} strokeWidth={2} />
+            <h2 className="text-base font-semibold text-vscode-editor-fg">Longest Idle Session</h2>
           </div>
           {stats.longest ? (
             <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-600">Duration</p>
-                <p className="text-3xl font-bold text-orange-600">
+              <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+                <p className="text-xs text-vscode-foreground opacity-75 mb-1">Duration</p>
+                <p className="text-2xl font-bold text-orange-600">
                   {formatDuration(stats.longest.durationMin)}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Time range</p>
-                <p className="text-sm">
+              <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+                <p className="text-xs text-vscode-foreground opacity-75 mb-1">Time Range</p>
+                <p className="text-sm text-vscode-editor-fg">
                   {formatTimeRange(stats.longest.startTs, stats.longest.endTs)}
                 </p>
               </div>
               {stats.longest.endedReason && (
-                <div>
-                  <p className="text-sm text-gray-600">Ended by</p>
-                  <p className="text-xs font-mono text-gray-500">
+                <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+                  <p className="text-xs text-vscode-foreground opacity-75 mb-1">Ended By</p>
+                  <p className="text-xs font-mono text-vscode-descriptionForeground">
                     {stats.longest.endedReason.replace(/_/g, ' ')}
                   </p>
                 </div>
               )}
-              <div className="pt-2 border-t">
-                <p className="text-xs text-gray-500">
-                  ⚠️ Longer idle times may indicate distractions
-                </p>
+              <div className="flex items-start gap-2 p-2 border border-vscode-panel-border rounded bg-vscode-editor-bg">
+                <AlertCircle className="text-orange-500 flex-shrink-0 mt-0.5" size={16} />
+                <p className="text-xs text-vscode-foreground">Longer idle times may indicate distractions</p>
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No idle sessions recorded yet</p>
+            <p className="text-sm text-vscode-descriptionForeground text-center py-4">No idle sessions recorded yet</p>
           )}
-        </Card>
+        </div>
 
         {/* Shortest Idle */}
-        <Card className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold flex items-center gap-2">
-              <TrendingDown className="w-5 h-5 text-green-500" />
-              Shortest Idle Session
-            </h2>
+        <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+          <div className="flex items-center gap-2 mb-3">
+            <TrendingDown className="text-green-500" size={20} strokeWidth={2} />
+            <h2 className="text-base font-semibold text-vscode-editor-fg">Shortest Idle Session</h2>
           </div>
           {stats.shortest ? (
             <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-600">Duration</p>
-                <p className="text-3xl font-bold text-green-600">
+              <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+                <p className="text-xs text-vscode-foreground opacity-75 mb-1">Duration</p>
+                <p className="text-2xl font-bold text-green-600">
                   {formatDuration(stats.shortest.durationMin)}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Time range</p>
-                <p className="text-sm">
+              <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+                <p className="text-xs text-vscode-foreground opacity-75 mb-1">Time Range</p>
+                <p className="text-sm text-vscode-editor-fg">
                   {formatTimeRange(stats.shortest.startTs, stats.shortest.endTs)}
                 </p>
               </div>
               {stats.shortest.endedReason && (
-                <div>
-                  <p className="text-sm text-gray-600">Ended by</p>
-                  <p className="text-xs font-mono text-gray-500">
+                <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+                  <p className="text-xs text-vscode-foreground opacity-75 mb-1">Ended By</p>
+                  <p className="text-xs font-mono text-vscode-descriptionForeground">
                     {stats.shortest.endedReason.replace(/_/g, ' ')}
                   </p>
                 </div>
               )}
-              <div className="pt-2 border-t">
-                <p className="text-xs text-gray-500">
-                  ✅ Shorter idle sessions show better focus
-                </p>
+              <div className="flex items-start gap-2 p-2 border border-vscode-panel-border rounded bg-vscode-editor-bg">
+                <CheckCircle2 className="text-green-500 flex-shrink-0 mt-0.5" size={16} />
+                <p className="text-xs text-vscode-foreground">Shorter idle sessions show better focus</p>
               </div>
             </div>
           ) : (
-            <p className="text-gray-500 text-center py-8">No idle sessions recorded yet</p>
+            <p className="text-sm text-vscode-descriptionForeground text-center py-4">No idle sessions recorded yet</p>
           )}
-        </Card>
+        </div>
       </div>
 
       {/* How it works */}
-      <Card className="p-6 bg-gray-50 border-gray-200">
-        <h3 className="font-semibold mb-3 text-gray-900 flex items-center gap-2">
-          <Clock className="w-4 h-4" />
-          How idle tracking works
-        </h3>
-        <div className="text-sm text-gray-700 space-y-2">
+      <div className="border border-vscode-panel-border rounded-xl p-4 bg-vscode-widget-bg">
+        <div className="flex items-center gap-2 mb-3">
+          <Info className="text-brand-primary" size={20} strokeWidth={2} />
+          <h3 className="text-base font-semibold text-vscode-editor-fg">How idle tracking works</h3>
+        </div>
+        <div className="text-sm text-vscode-foreground space-y-3">
           <div>
-            <span className="font-medium">Activity detection:</span>
-            <ul className="list-disc list-inside ml-2 mt-1 space-y-0.5">
-              <li>Edits, saves, file navigation</li>
-              <li>Text selection, scrolling</li>
-              <li>Running tasks/tests, debugging</li>
-              <li>Terminal interactions, VS Code focus</li>
+            <p className="font-medium mb-2">Activity detection:</p>
+            <ul className="space-y-1 ml-1">
+              <li className="flex items-start gap-2">
+                <span className="text-brand-primary mt-0.5">•</span>
+                <span>Edits, saves, file navigation</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-primary mt-0.5">•</span>
+                <span>Text selection, scrolling</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-primary mt-0.5">•</span>
+                <span>Running tasks/tests, debugging</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-primary mt-0.5">•</span>
+                <span>Terminal interactions, VS Code focus</span>
+              </li>
             </ul>
           </div>
-          <div className="pt-2">
-            <span className="font-medium">Idle session lifecycle:</span>
-            <ul className="list-disc list-inside ml-2 mt-1 space-y-0.5">
-              <li>Starts: 15 minutes after last activity</li>
-              <li>Ends: When any activity resumes</li>
-              <li>Saved: Only if duration ≥ 15 minutes</li>
+          <div>
+            <p className="font-medium mb-2">Idle session lifecycle:</p>
+            <ul className="space-y-1 ml-1">
+              <li className="flex items-start gap-2">
+                <span className="text-brand-primary mt-0.5">•</span>
+                <span>Starts: 15 minutes after last activity</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-primary mt-0.5">•</span>
+                <span>Ends: When any activity resumes</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-primary mt-0.5">•</span>
+                <span>Saved: Only if duration ≥ 15 minutes</span>
+              </li>
             </ul>
           </div>
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
