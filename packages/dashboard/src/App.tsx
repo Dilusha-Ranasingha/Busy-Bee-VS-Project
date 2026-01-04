@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle, GitCommit } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle, GitCommit, Coffee } from 'lucide-react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
@@ -11,10 +11,11 @@ import { DiagnosticDensityPage } from './pages/Metrics-Tracking/DiagnosticDensit
 import { ErrorFixTimePage } from './pages/Metrics-Tracking/ErrorFixTime';
 import { TaskRunsPage } from './pages/Metrics-Tracking/TaskRuns';
 import { CommitEditSessionsPage } from './pages/Metrics-Tracking/CommitEditSessions';
+import { IdleSessionsPage } from './pages/Metrics-Tracking/IdleSessions';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits' | 'idle';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -28,6 +29,7 @@ const NAV_ITEMS = [
   { id: 'errorfix', label: 'Error Fix Time', icon: Clock },
   { id: 'taskruns', label: 'Task Runs', icon: PlayCircle },
   { id: 'commitedits', label: 'Commit Edits', icon: GitCommit },
+  { id: 'idle', label: 'Idle Time', icon: Coffee },
 ];
 
 export default function App() {
@@ -68,6 +70,7 @@ export default function App() {
             {tab === 'errorfix' && <ErrorFixTimePage />}
             {tab === 'taskruns' && <TaskRunsPage />}
             {tab === 'commitedits' && <CommitEditSessionsPage />}
+            {tab === 'idle' && <IdleSessionsPage />}
           </div>
         </main>
       </div>

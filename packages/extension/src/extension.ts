@@ -10,6 +10,7 @@ import { DiagnosticDensityTracker } from './tracking/DiagnosticDensityTracker';
 import { ErrorFixTimeTracker } from './tracking/ErrorFixTimeTracker';
 import { TaskRunsTracker } from './tracking/TaskRunsTracker';
 import { CommitEditSessionsTracker } from './tracking/CommitEditSessionsTracker';
+import { IdleSessionsTracker } from './tracking/IdleSessionsTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
@@ -21,6 +22,7 @@ let diagnosticDensityTracker: DiagnosticDensityTracker | undefined;
 let errorFixTimeTracker: ErrorFixTimeTracker | undefined;
 let taskRunsTracker: TaskRunsTracker | undefined;
 let commitEditSessionsTracker: CommitEditSessionsTracker | undefined;
+let idleSessionsTracker: IdleSessionsTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -107,6 +109,16 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.workspace.workspaceFolders?.[0]
 				);
 				console.log('Commit Edit Sessions Tracker started');
+				
+				// Start Idle Sessions tracker
+				if (idleSessionsTracker) {
+					idleSessionsTracker.dispose();
+				}
+				idleSessionsTracker = new IdleSessionsTracker(
+					authManager,
+					vscode.workspace.workspaceFolders?.[0]
+				);
+				console.log('Idle Sessions Tracker started');
 			} else {
 				console.log('[Extension] User signed out');
 				
@@ -142,6 +154,10 @@ export function activate(context: vscode.ExtensionContext) {
 				if (commitEditSessionsTracker) {
 					commitEditSessionsTracker.dispose();
 					commitEditSessionsTracker = undefined;
+				}
+				if (idleSessionsTracker) {
+					idleSessionsTracker.dispose();
+					idleSessionsTracker = undefined;
 				}
 			}
 		})
@@ -193,6 +209,13 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.workspace.workspaceFolders?.[0]
 		);
 		console.log('Commit Edit Sessions Tracker started (user already authenticated)');
+		
+		// Start Idle Sessions tracker
+		idleSessionsTracker = new IdleSessionsTracker(
+			authManager,
+			vscode.workspace.workspaceFolders?.[0]
+		);
+		console.log('Idle Sessions Tracker started (user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
@@ -295,5 +318,9 @@ export function deactivate() {
 	if (commitEditSessionsTracker) {
 		commitEditSessionsTracker.dispose();
 		console.log('Commit Edit Sessions Tracker stopped');
+	}
+	if (idleSessionsTracker) {
+		idleSessionsTracker.dispose();
+		console.log('Idle Sessions Tracker stopped');
 	}
 }

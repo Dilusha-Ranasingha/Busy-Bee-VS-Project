@@ -280,3 +280,32 @@ CREATE INDEX IF NOT EXISTS idx_commit_edit_sessions_user ON commit_edit_sessions
 CREATE INDEX IF NOT EXISTS idx_commit_edit_sessions_edits ON commit_edit_sessions(user_id, edits_per_commit DESC);
 CREATE INDEX IF NOT EXISTS idx_commit_edit_sessions_today ON commit_edit_sessions(user_id, start_ts) WHERE aborted = FALSE;
 
+-- ============================================================
+-- 9) Idle Sessions (Distraction Detection)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS idle_sessions (
+  id SERIAL PRIMARY KEY,
+  
+  session_id TEXT NOT NULL UNIQUE,
+  user_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  -- Timing
+  start_ts TIMESTAMPTZ NOT NULL,
+  end_ts TIMESTAMPTZ NOT NULL,
+  duration_min NUMERIC NOT NULL CHECK (duration_min >= 15),
+  
+  -- Configuration
+  threshold_min INT NOT NULL DEFAULT 15,
+  
+  -- Optional metadata
+  ended_reason TEXT, -- 'activity', 'vscode_close', 'os_sleep_wake'
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for idle session queries
+CREATE INDEX IF NOT EXISTS idx_idle_sessions_user ON idle_sessions(user_id, start_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_idle_sessions_duration ON idle_sessions(user_id, duration_min DESC);
+CREATE INDEX IF NOT EXISTS idx_idle_sessions_shortest ON idle_sessions(user_id, duration_min ASC);
+
