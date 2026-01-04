@@ -207,8 +207,12 @@ export async function createPlan(req: Request, res: Response) {
       horizonDays * maxHoursPerDay * 60
     );
 
-    const feasible = targetMinutes <= maxPossibleMinutes;
+    // Make feasibility consistent with what we display to user (half-hour rounding)
     const suggestedTargetHours = roundToHalfHours(maxPossibleMinutes / 60);
+    const targetHoursRounded = roundToHalfHours(targetHoursRaw);
+
+    // If target is <= suggested target (same rounding), treat it as feasible
+    const feasible = targetHoursRounded <= suggestedTargetHours;
 
     let plan: Array<{ date: string; hours: number; window: "day" | "night" | "mixed" }>;
     let unallocatedMinutes = 0;
