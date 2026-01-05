@@ -14,6 +14,8 @@ import taskRunsRoutes from '../features/Metrics-Tracking/taskRuns/taskRuns.route
 import commitEditSessionsRoutes from '../features/Metrics-Tracking/commitEditSessions/commitEditSessions.routes.js';
 import idleSessionsRoutes from '../features/Metrics-Tracking/idleSessions/idleSessions.routes.js';
 import authRoutes from '../features/auth/auth.routes.js';
+import errorSessionsRoutes from '../features/Code-Risk/errorSessions/errorSessions.routes.js';
+import geminiRiskResultsRoutes from '../features/Code-Risk/geminiRiskResults/geminiRiskResults.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
 const app: Application = express();
@@ -35,6 +37,8 @@ app.use('/api/task-runs', taskRunsRoutes);
 app.use('/api/commit-edit-sessions', commitEditSessionsRoutes);
 app.use('/api/idle-sessions', idleSessionsRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/code-risk/error-sessions', errorSessionsRoutes);
+app.use('/api/code-risk/risk-results', geminiRiskResultsRoutes);
 
 app.use(errorHandler);
 

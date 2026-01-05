@@ -11,6 +11,7 @@ import { ErrorFixTimeTracker } from './tracking/ErrorFixTimeTracker';
 import { TaskRunsTracker } from './tracking/TaskRunsTracker';
 import { CommitEditSessionsTracker } from './tracking/CommitEditSessionsTracker';
 import { IdleSessionsTracker } from './tracking/IdleSessionsTracker';
+import { ErrorSessionTracker } from './tracking/ErrorSessionTracker';
 import { AuthManager } from './auth/AuthManager';
 
 // Global instances
@@ -23,6 +24,7 @@ let errorFixTimeTracker: ErrorFixTimeTracker | undefined;
 let taskRunsTracker: TaskRunsTracker | undefined;
 let commitEditSessionsTracker: CommitEditSessionsTracker | undefined;
 let idleSessionsTracker: IdleSessionsTracker | undefined;
+let errorSessionTracker: ErrorSessionTracker | undefined;
 let authManager: AuthManager;
 
 // This method is called when your extension is activated
@@ -119,6 +121,16 @@ export function activate(context: vscode.ExtensionContext) {
 					vscode.workspace.workspaceFolders?.[0]
 				);
 				console.log('Idle Sessions Tracker started');
+				
+				// Start Error Session tracker (Code Risk)
+				if (errorSessionTracker) {
+					errorSessionTracker.dispose();
+				}
+				errorSessionTracker = new ErrorSessionTracker(
+					authManager,
+					vscode.workspace.workspaceFolders?.[0]
+				);
+				console.log('Error Session Tracker started (Code Risk)');
 			} else {
 				console.log('[Extension] User signed out');
 				
@@ -158,6 +170,10 @@ export function activate(context: vscode.ExtensionContext) {
 				if (idleSessionsTracker) {
 					idleSessionsTracker.dispose();
 					idleSessionsTracker = undefined;
+				}
+				if (errorSessionTracker) {
+					errorSessionTracker.dispose();
+					errorSessionTracker = undefined;
 				}
 			}
 		})
@@ -216,6 +232,13 @@ export function activate(context: vscode.ExtensionContext) {
 			vscode.workspace.workspaceFolders?.[0]
 		);
 		console.log('Idle Sessions Tracker started (user already authenticated)');
+		
+		// Start Error Session tracker (Code Risk)
+		errorSessionTracker = new ErrorSessionTracker(
+			authManager,
+			vscode.workspace.workspaceFolders?.[0]
+		);
+		console.log('Error Session Tracker started (Code Risk - user already authenticated)');
 	} else {
 		console.log('User not authenticated. Sign in to start tracking.');
 	}
