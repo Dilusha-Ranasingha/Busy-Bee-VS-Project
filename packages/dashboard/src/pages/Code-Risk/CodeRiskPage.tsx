@@ -1,8 +1,7 @@
 import React from 'react';
-import { Card } from '../../components/ui/Card';
 import { useCodeRisk } from '../../hooks/useCodeRisk';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
-import { AlertTriangle, CheckCircle, AlertCircle, XCircle, RefreshCw } from 'lucide-react';
+import { AlertTriangle, CheckCircle, AlertCircle, XCircle, RefreshCw, Info } from 'lucide-react';
 import type { CodeRiskItem } from '../../types/Code-Risk/codeRisk.types';
 
 export const CodeRiskPage: React.FC = () => {
@@ -17,7 +16,7 @@ export const CodeRiskPage: React.FC = () => {
 
   if (loading && activeRisks.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64">
+      <div className="flex items-center justify-center min-h-[200px]">
         <LoadingSpinner />
       </div>
     );
@@ -25,50 +24,46 @@ export const CodeRiskPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="p-4">
-        <Card className="p-6 bg-red-50 border-red-200">
-          <div className="flex items-center gap-2 text-red-700">
-            <XCircle className="w-5 h-5" />
-            <p>{error}</p>
-          </div>
-        </Card>
+      <div className="p-3 rounded-lg border border-vscode-input-error-border bg-vscode-input-error-bg text-vscode-input-error-fg text-sm">
+        <div className="flex items-center gap-2">
+          <XCircle size={16} />
+          <p>{error}</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Code Risk Analysis</h1>
-          <p className="text-gray-600 mt-2">
-            AI-powered risk assessment for files with errors
-          </p>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="text-orange-500" size={20} />
+          <h1 className="text-base font-semibold text-vscode-editor-fg">Code Risk Analysis</h1>
         </div>
         <button
           onClick={fetchActiveRisks}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-1.5 px-2.5 py-1.5 bg-brand-primary text-white rounded text-xs hover:opacity-90 transition-opacity"
         >
-          <RefreshCw className="w-4 h-4" />
+          <RefreshCw size={14} />
           Refresh
         </button>
       </div>
 
       {!hasActiveRisks ? (
-        <Card className="p-8 text-center">
-          <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">
+        <div className="border border-vscode-panel-border rounded-lg p-4 bg-vscode-widget-bg text-center">
+          <CheckCircle className="mx-auto mb-2 text-green-500" size={32} />
+          <h3 className="text-sm font-semibold text-vscode-editor-fg mb-1">
             No Active Risks Detected
           </h3>
-          <p className="text-gray-600">
-            Great job! All your files are error-free or risks have been resolved.
+          <p className="text-xs text-vscode-descriptionForeground">
+            All files are error-free or risks have been resolved.
           </p>
-        </Card>
+        </div>
       ) : (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <AlertTriangle className="w-4 h-4" />
-            <span>{activeRisks.length} active risk{activeRisks.length !== 1 ? 's' : ''} detected</span>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 px-3 py-2 border border-vscode-panel-border rounded-lg bg-vscode-widget-bg">
+            <AlertTriangle className="text-orange-500" size={16} />
+            <span className="text-xs text-vscode-foreground">{activeRisks.length} active risk{activeRisks.length !== 1 ? 's' : ''} detected</span>
           </div>
 
           {activeRisks.map((risk) => (
@@ -107,103 +102,112 @@ const CodeRiskCard: React.FC<CodeRiskCardProps> = ({ risk, onDismiss }) => {
   // Color schemes
   const colorSchemes = {
     Green: {
-      bg: 'bg-green-50',
-      border: 'border-green-200',
-      text: 'text-green-700',
-      badge: 'bg-green-100 text-green-800',
-      icon: <CheckCircle className="w-6 h-6 text-green-600" />
+      bg: 'bg-vscode-widget-bg',
+      border: 'border-green-500',
+      text: 'text-green-600',
+      badge: 'bg-green-500 bg-opacity-10 text-green-600 border border-green-500',
+      icon: <CheckCircle className="text-green-600 flex-shrink-0" size={20} />
     },
     Yellow: {
-      bg: 'bg-yellow-50',
-      border: 'border-yellow-200',
-      text: 'text-yellow-700',
-      badge: 'bg-yellow-100 text-yellow-800',
-      icon: <AlertTriangle className="w-6 h-6 text-yellow-600" />
+      bg: 'bg-vscode-widget-bg',
+      border: 'border-yellow-500',
+      text: 'text-yellow-600',
+      badge: 'bg-yellow-500 bg-opacity-10 text-yellow-600 border border-yellow-500',
+      icon: <AlertTriangle className="text-yellow-600 flex-shrink-0" size={20} />
     },
     Red: {
-      bg: 'bg-red-50',
-      border: 'border-red-200',
-      text: 'text-red-700',
-      badge: 'bg-red-100 text-red-800',
-      icon: <AlertCircle className="w-6 h-6 text-red-600" />
+      bg: 'bg-vscode-widget-bg',
+      border: 'border-red-500',
+      text: 'text-red-600',
+      badge: 'bg-red-500 bg-opacity-10 text-red-600 border border-red-500',
+      icon: <AlertCircle className="text-red-600 flex-shrink-0" size={20} />
     }
   };
 
   const scheme = colorSchemes[risk.colorCode];
 
   return (
-    <Card className={`p-6 ${scheme.bg} ${scheme.border} border-2`}>
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-start gap-3">
+    <div className={`border-2 ${scheme.border} ${scheme.bg} rounded-xl p-4 space-y-3`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2 min-w-0 flex-1">
           {scheme.icon}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm font-semibold text-vscode-editor-fg truncate">
               {risk.fileName}
             </h3>
-            <p className="text-sm text-gray-600 mt-1">{risk.fileUri}</p>
+            <p className="text-xs text-vscode-descriptionForeground truncate">{risk.fileUri}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className={`px-3 py-1 rounded-full text-sm font-medium ${scheme.badge}`}>
-            {risk.riskLevel} Risk
-          </span>
-          <button
-            onClick={handleDismiss}
-            disabled={dismissing}
-            className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 hover:bg-white rounded transition-colors disabled:opacity-50"
-          >
-            {dismissing ? 'Dismissing...' : 'Dismiss'}
-          </button>
-        </div>
+        <button
+          onClick={handleDismiss}
+          disabled={dismissing}
+          className="px-2 py-1 text-xs text-vscode-foreground hover:bg-vscode-editor-bg rounded transition-colors disabled:opacity-50 flex-shrink-0"
+        >
+          {dismissing ? 'Dismissing...' : 'Dismiss'}
+        </button>
+      </div>
+
+      <div className={`px-2 py-1 rounded text-xs font-medium ${scheme.badge} inline-flex items-center justify-center`}>
+        {risk.riskLevel} Risk
       </div>
 
       {/* Metrics */}
-      <div className="grid grid-cols-3 gap-4 mb-4 p-4 bg-white rounded-lg">
-        <div>
-          <p className="text-sm text-gray-600">Errors</p>
-          <p className="text-2xl font-bold text-gray-900">{risk.errorCount}</p>
+      <div className="grid grid-cols-3 gap-2">
+        <div className="border border-vscode-panel-border rounded-lg p-2 bg-vscode-editor-bg">
+          <p className="text-xs text-vscode-foreground opacity-75">Errors</p>
+          <p className="text-lg font-bold text-vscode-editor-fg">{risk.errorCount}</p>
         </div>
-        <div>
-          <p className="text-sm text-gray-600">Lines of Code</p>
-          <p className="text-2xl font-bold text-gray-900">{risk.loc}</p>
+        <div className="border border-vscode-panel-border rounded-lg p-2 bg-vscode-editor-bg">
+          <p className="text-xs text-vscode-foreground opacity-75">LOC</p>
+          <p className="text-lg font-bold text-vscode-editor-fg">{risk.loc}</p>
         </div>
-        <div>
-          <p className="text-sm text-gray-600">Recent Edits</p>
-          <p className="text-2xl font-bold text-gray-900">{risk.recentEdits}</p>
+        <div className="border border-vscode-panel-border rounded-lg p-2 bg-vscode-editor-bg">
+          <p className="text-xs text-vscode-foreground opacity-75">Edits</p>
+          <p className="text-lg font-bold text-vscode-editor-fg">{risk.recentEdits}</p>
         </div>
       </div>
 
       {/* Risk Explanation */}
-      <div className="mb-4">
-        <h4 className="font-semibold text-gray-900 mb-2">Why is this risky?</h4>
-        <p className={`${scheme.text}`}>{risk.riskExplanation}</p>
+      <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+        <h4 className="text-xs font-semibold text-vscode-editor-fg mb-1.5 flex items-center gap-1.5">
+          <AlertTriangle size={14} />
+          Why is this risky?
+        </h4>
+        <p className={`text-xs ${scheme.text}`}>{risk.riskExplanation}</p>
       </div>
 
       {/* Error Explanation */}
-      <div className="mb-4">
-        <h4 className="font-semibold text-gray-900 mb-2">What's happening?</h4>
-        <p className="text-gray-700">{risk.errorExplanation}</p>
+      <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+        <h4 className="text-xs font-semibold text-vscode-editor-fg mb-1.5 flex items-center gap-1.5">
+          <Info size={14} />
+          What's happening?
+        </h4>
+        <p className="text-xs text-vscode-foreground">{risk.errorExplanation}</p>
       </div>
 
       {/* Fix Steps */}
-      <div>
-        <h4 className="font-semibold text-gray-900 mb-2">How to fix:</h4>
-        <ol className="list-decimal list-inside space-y-2">
+      <div className="border border-vscode-panel-border rounded-lg p-3 bg-vscode-editor-bg">
+        <h4 className="text-xs font-semibold text-vscode-editor-fg mb-2 flex items-center gap-1.5">
+          <CheckCircle size={14} />
+          How to fix:
+        </h4>
+        <ol className="space-y-1.5">
           {risk.fixSteps.map((step, index) => (
-            <li key={index} className="text-gray-700">
-              {step}
+            <li key={index} className="flex items-start gap-2 text-xs text-vscode-foreground">
+              <span className="text-brand-primary mt-0.5">{index + 1}.</span>
+              <span>{step}</span>
             </li>
           ))}
         </ol>
       </div>
 
       {/* Timestamp */}
-      <div className="mt-4 pt-4 border-t border-gray-200">
-        <p className="text-xs text-gray-500">
+      <div className="pt-2 border-t border-vscode-panel-border">
+        <p className="text-xs text-vscode-descriptionForeground">
           Detected: {new Date(risk.createdAt).toLocaleString()}
         </p>
       </div>
-    </Card>
+    </div>
   );
 };
 
