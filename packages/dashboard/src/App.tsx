@@ -3,8 +3,9 @@ import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
 import ForecastingPage from './pages/Forecasting';
+import ChatbotPage from './pages/Chatbot';
 
-type Tab = 'dashboard' | 'forecasting' | 'add' | 'list';
+type Tab = 'dashboard' | 'forecasting' | 'chatbot' | 'add' | 'list';
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');
@@ -41,6 +42,17 @@ export default function App() {
             </button>
 
             <button
+              onClick={() => setTab('chatbot')}
+              className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus border-l border-vscode-widget-border ${
+                tab === 'chatbot'
+                  ? 'bg-brand-primary text-white'
+                  : 'bg-vscode-input-bg text-vscode-foreground hover:bg-vscode-list-hover-bg'
+              }`}
+            >
+              Chatbot
+            </button>
+
+            <button
               onClick={() => setTab('add')}
               className={`px-4 py-2 text-sm font-medium transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-vscode-focus border-l border-vscode-widget-border ${
                 tab === 'add'
@@ -68,6 +80,7 @@ export default function App() {
       <main className="container mx-auto px-4 py-8">
         {tab === 'dashboard' && <DashboardPage />}
         {tab === 'forecasting' && <ForecastingPage />}
+        {tab === 'chatbot' && <ChatbotPage />}
         {tab === 'add' && <AddProductPage />}
         {tab === 'list' && <ProductListPage />}
       </main>
