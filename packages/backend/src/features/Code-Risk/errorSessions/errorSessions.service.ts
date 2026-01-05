@@ -1,6 +1,5 @@
-import pool from '../../../config/db';
+import { getPool } from '../../../config/db';
 import { 
-  ErrorSession, 
   CreateErrorSessionPayload, 
   ErrorSessionDTO 
 } from './errorSessions.types';
@@ -10,6 +9,7 @@ export class ErrorSessionsService {
    * Create a new error session
    */
   static async createSession(payload: CreateErrorSessionPayload): Promise<ErrorSessionDTO> {
+    const pool = getPool();
     const query = `
       INSERT INTO error_sessions (
         session_id, user_id, workspace_id, file_uri, file_hash, language,
@@ -43,6 +43,7 @@ export class ErrorSessionsService {
    * Get all error sessions for a user
    */
   static async getSessionsByUser(userId: string, limit = 100): Promise<ErrorSessionDTO[]> {
+    const pool = getPool();
     const query = `
       SELECT * FROM error_sessions
       WHERE user_id = $1
@@ -58,6 +59,7 @@ export class ErrorSessionsService {
    * Get error sessions by file
    */
   static async getSessionsByFile(fileUri: string, limit = 50): Promise<ErrorSessionDTO[]> {
+    const pool = getPool();
     const query = `
       SELECT * FROM error_sessions
       WHERE file_uri = $1
@@ -73,6 +75,7 @@ export class ErrorSessionsService {
    * Get pending sessions (not yet sent to Gemini)
    */
   static async getPendingSessions(limit = 10): Promise<ErrorSessionDTO[]> {
+    const pool = getPool();
     const query = `
       SELECT * FROM error_sessions
       WHERE sent_to_gemini = FALSE
@@ -88,6 +91,7 @@ export class ErrorSessionsService {
    * Get a session by ID
    */
   static async getSessionById(id: string): Promise<ErrorSessionDTO | null> {
+    const pool = getPool();
     const query = `
       SELECT * FROM error_sessions
       WHERE id = $1
@@ -101,6 +105,7 @@ export class ErrorSessionsService {
    * Mark session as sent to Gemini
    */
   static async markAsSentToGemini(id: string): Promise<void> {
+    const pool = getPool();
     const query = `
       UPDATE error_sessions
       SET sent_to_gemini = TRUE, gemini_requested_at = NOW()
@@ -114,6 +119,7 @@ export class ErrorSessionsService {
    * Get recent sessions by user (last 24 hours)
    */
   static async getRecentSessions(userId: string): Promise<ErrorSessionDTO[]> {
+    const pool = getPool();
     const query = `
       SELECT * FROM error_sessions
       WHERE user_id = $1

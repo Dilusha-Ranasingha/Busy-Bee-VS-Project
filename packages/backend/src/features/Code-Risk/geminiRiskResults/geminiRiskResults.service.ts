@@ -1,10 +1,8 @@
-import pool from '../../../config/db';
+import { getPool } from '../../../config/db';
 import { 
-  GeminiRiskResult, 
   CreateGeminiRiskResultPayload, 
   GeminiRiskResultDTO,
-  GeminiAPIRequest,
-  GeminiAPIResponse
+  GeminiAPIRequest
 } from './geminiRiskResults.types';
 import { GeminiService } from '../gemini/gemini.service';
 import { ErrorSessionsService } from '../errorSessions/errorSessions.service';
@@ -66,6 +64,7 @@ export class GeminiRiskResultsService {
    * Create a new risk result (internal method)
    */
   private static async createResult(payload: CreateGeminiRiskResultPayload): Promise<GeminiRiskResultDTO> {
+    const pool = getPool();
     const query = `
       INSERT INTO gemini_risk_results (
         session_id, error_session_id, user_id, file_uri,
@@ -94,6 +93,7 @@ export class GeminiRiskResultsService {
    * Get active risk results for a user
    */
   static async getActiveResultsByUser(userId: string): Promise<GeminiRiskResultDTO[]> {
+    const pool = getPool();
     const query = `
       SELECT * FROM gemini_risk_results
       WHERE user_id = $1 AND is_active = TRUE
@@ -108,6 +108,7 @@ export class GeminiRiskResultsService {
    * Get active risk result for a specific file
    */
   static async getActiveResultByFile(userId: string, fileUri: string): Promise<GeminiRiskResultDTO | null> {
+    const pool = getPool();
     const query = `
       SELECT * FROM gemini_risk_results
       WHERE user_id = $1 AND file_uri = $2 AND is_active = TRUE
@@ -123,6 +124,7 @@ export class GeminiRiskResultsService {
    * Get all risk results for a user (including inactive)
    */
   static async getAllResultsByUser(userId: string, limit = 100): Promise<GeminiRiskResultDTO[]> {
+    const pool = getPool();
     const query = `
       SELECT * FROM gemini_risk_results
       WHERE user_id = $1
@@ -138,6 +140,7 @@ export class GeminiRiskResultsService {
    * Deactivate risk results for a specific file
    */
   static async deactivateResultsForFile(userId: string, fileUri: string): Promise<void> {
+    const pool = getPool();
     const query = `
       UPDATE gemini_risk_results
       SET is_active = FALSE
@@ -151,6 +154,7 @@ export class GeminiRiskResultsService {
    * Deactivate a specific result
    */
   static async deactivateResult(id: string): Promise<void> {
+    const pool = getPool();
     const query = `
       UPDATE gemini_risk_results
       SET is_active = FALSE
@@ -164,6 +168,7 @@ export class GeminiRiskResultsService {
    * Get result by ID
    */
   static async getResultById(id: string): Promise<GeminiRiskResultDTO | null> {
+    const pool = getPool();
     const query = `
       SELECT * FROM gemini_risk_results
       WHERE id = $1

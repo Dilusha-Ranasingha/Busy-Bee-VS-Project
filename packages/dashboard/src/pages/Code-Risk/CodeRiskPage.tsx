@@ -3,7 +3,7 @@ import { Card } from '../../components/ui/Card';
 import { useCodeRisk } from '../../hooks/useCodeRisk';
 import { LoadingSpinner } from '../../components/ui/LoadingSpinner';
 import { AlertTriangle, CheckCircle, AlertCircle, XCircle, RefreshCw } from 'lucide-react';
-import { CodeRiskItem } from '../../types/Code-Risk/codeRisk.types';
+import type { CodeRiskItem } from '../../types/Code-Risk/codeRisk.types';
 
 export const CodeRiskPage: React.FC = () => {
   const { 

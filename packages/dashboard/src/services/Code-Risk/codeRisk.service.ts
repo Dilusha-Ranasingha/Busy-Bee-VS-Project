@@ -1,5 +1,5 @@
-import apiClient from '../api.client';
-import { GeminiRiskResult, CodeRiskItem } from '../../types/Code-Risk/codeRisk.types';
+import { apiClient } from '../api.client';
+import type { GeminiRiskResult, CodeRiskItem } from '../../types/Code-Risk/codeRisk.types';
 
 /**
  * Get active risk results for current user

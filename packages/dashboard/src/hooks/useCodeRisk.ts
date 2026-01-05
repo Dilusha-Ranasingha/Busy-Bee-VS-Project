@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { GeminiRiskResult, CodeRiskItem } from '../types/Code-Risk/codeRisk.types';
+import type { CodeRiskItem } from '../types/Code-Risk/codeRisk.types';
 import { 
   getActiveRiskResults, 
   getAllRiskResults,

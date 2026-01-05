@@ -345,7 +345,7 @@ export class ErrorSessionTracker {
   /**
    * Handle task start (build/test)
    */
-  private handleTaskStart(event: vscode.TaskStartExecution): void {
+  private handleTaskStart(event: vscode.TaskStartEvent): void {
     // Can be used to track when builds start
     console.log('[ErrorSessionTracker] Task started:', event.execution.task.name);
   }
