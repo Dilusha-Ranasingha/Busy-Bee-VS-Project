@@ -1,37 +1,83 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
-import * as vscode from 'vscode';
-import { ProductDashboardViewProvider } from './webview/ProductDashboardViewProvider';
+import * as vscode from "vscode";
+import { ProductDashboardViewProvider } from "./webview/ProductDashboardViewProvider";
+import { TodoDashboardViewProvider } from "./webview/TodoDashboardViewProvider";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+import { Logger } from "./logger/logger";
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "busy-bee-vs" is now active!');
+// Your “covered” modules
+import { createProjectContextResolver } from "./workspace/projectContext";
+import { registerWorkspaceWatchers } from "./workspace/watchers";
+import { createStorageManager } from "./storage/storageManager";
+import { registerCommands } from "./commands";
+import { registerTodoTracker } from "./features/todo-tracker";
 
-	// Register the Product Dashboard webview
-	const dashboardProvider = new ProductDashboardViewProvider(context.extensionUri);
-	
-	context.subscriptions.push(
-		vscode.window.registerWebviewViewProvider(
-			ProductDashboardViewProvider.viewType,
-			dashboardProvider
-		)
-	);
+export async function activate(context: vscode.ExtensionContext) {
+  const logger = new Logger("busy-bee-vs", "info");
+  logger.info('Extension activating...');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('busy-bee-vs.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from Busy-Bee-VS!');
-	});
+  // ✅ Keep your existing Product Dashboard webview
+  const dashboardProvider = new ProductDashboardViewProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      ProductDashboardViewProvider.viewType,
+      dashboardProvider
+    )
+  );
+  
 
-	context.subscriptions.push(disposable);
+  // ✅ Keep your existing helloWorld command
+  context.subscriptions.push(
+    vscode.commands.registerCommand("busy-bee-vs.helloWorld", () => {
+      vscode.window.showInformationMessage("Hello World from Busy-Bee-VS!");
+    })
+  );
+
+  // -------------------------------
+  // ✅ TODO Tracker wiring starts
+  // -------------------------------
+
+  // 1) Project context (workspace scoped)
+  const projectResolver = createProjectContextResolver(logger);
+
+  // 2) Storage (Option A + fallback B)
+  const storageManager = createStorageManager(context, logger);
+
+  // 3) Feature init (controller)
+  const todoTracker = registerTodoTracker({
+    context,
+    logger,
+    projectResolver,
+    storageManager,
+  });
+  const todoDashboardProvider = new TodoDashboardViewProvider(context.extensionUri, {
+	logger,
+	todoTracker,
+	projectResolver,
+  });
+
+  context.subscriptions.push(
+	vscode.window.registerWebviewViewProvider(
+		TodoDashboardViewProvider.viewType,
+		todoDashboardProvider
+	)
+  );
+
+  // 4) Commands registration (TODO commands)
+  registerCommands({
+    context,
+    logger,
+    todoTracker,
+  });
+
+  // 5) Workspace watchers (save/edit/project switch triggers)
+  registerWorkspaceWatchers({
+    context,
+    logger,
+    projectResolver,
+    todoTracker,
+  });
+
+  logger.info("Extension activated ✅");
 }
 
-// This method is called when your extension is deactivated
 export function deactivate() {}

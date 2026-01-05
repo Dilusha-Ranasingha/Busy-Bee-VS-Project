@@ -9,14 +9,36 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onView:busyBee.productDashboard",
+    "onView:busyBee.todoDashboard",
+    "onCommand:busy-bee-vs.helloWorld",
+    "onCommand:busy-bee-vs.todo.scanWorkspace",
+    "onCommand:busy-bee-vs.todo.showTodos",
+    "onCommand:busy-bee-vs.todo.markResolved"
+  ],
+
+
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
       {
         "command": "busy-bee-vs.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "busy-bee-vs.todo.scanWorkspace",
+        "title": "Busy Bee: TODO Scan Workspace"
+      },
+      {
+        "command": "busy-bee-vs.todo.showTodos",
+        "title": "Busy Bee: TODO Show Todos"
+      },
+      {
+        "command": "busy-bee-vs.todo.markResolved",
+        "title": "Busy Bee: TODO Mark Resolved"
       }
+
     ],
     "viewsContainers": {
       "activitybar": [
@@ -34,7 +56,14 @@
           "type": "webview",
           "id": "busyBee.productDashboard",
           "name": "Product Dashboard"
+        },
+        {
+          "icon": "resources/bee-icon.png",
+          "type": "webview",
+          "id": "busyBee.todoDashboard",
+          "name": "TODO Tracker"
         }
+
       ]
     }
   },
@@ -65,5 +94,9 @@
     "typescript": "^5.9.3",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2"
+  },
+  "dependencies": {
+  "node-fetch": "^3.3.2",
+  "zod": "^3.23.8"
   }
 }
