@@ -13,6 +13,7 @@ import errorFixTimeRoutes from '../features/Metrics-Tracking/errorFixTime/errorF
 import taskRunsRoutes from '../features/Metrics-Tracking/taskRuns/taskRuns.routes.js';
 import commitEditSessionsRoutes from '../features/Metrics-Tracking/commitEditSessions/commitEditSessions.routes.js';
 import idleSessionsRoutes from '../features/Metrics-Tracking/idleSessions/idleSessions.routes.js';
+import dailyMetricsRoutes from '../features/Metrics-Tracking/dailyMetrics/dailyMetrics.routes.js';
 import authRoutes from '../features/auth/auth.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
@@ -34,6 +35,7 @@ app.use('/api/error-fix-time', errorFixTimeRoutes);
 app.use('/api/task-runs', taskRunsRoutes);
 app.use('/api/commit-edit-sessions', commitEditSessionsRoutes);
 app.use('/api/idle-sessions', idleSessionsRoutes);
+app.use('/api/daily-metrics', dailyMetricsRoutes);
 app.use('/api/auth', authRoutes);
 
 app.use(errorHandler);
