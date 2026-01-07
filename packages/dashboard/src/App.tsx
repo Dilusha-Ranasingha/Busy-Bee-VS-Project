@@ -1,8 +1,6 @@
 import { useState } from 'react';
-import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle, GitCommit, Coffee, ShieldAlert } from 'lucide-react';
+import { LayoutDashboard, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle, GitCommit, Coffee, ShieldAlert } from 'lucide-react';
 import { DashboardPage } from './pages/Dashboard';
-import { AddProductPage } from './pages/AddProduct';
-import { ProductListPage } from './pages/ProductList';
 import { FileSwitchRatePage } from './pages/Metrics-Tracking/FileSwitchRate';
 import { FocusStreakPage } from './pages/Metrics-Tracking/FocusStreak';
 import { EditSessionsPage } from './pages/Metrics-Tracking/EditSessions';
@@ -16,12 +14,10 @@ import { CodeRiskPage } from './pages/Code-Risk';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits' | 'idle' | 'coderisk';
+type Tab = 'dashboard' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits' | 'idle' | 'coderisk';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'add', label: 'Add Product', icon: PlusCircle },
-  { id: 'list', label: 'Product List', icon: Package },
   { id: 'coderisk', label: 'Code Risk', icon: ShieldAlert },
   { id: 'fileswitch', label: 'File Switch', icon: ArrowLeftRight },
   { id: 'focusstreak', label: 'Focus Streaks', icon: Flame },
@@ -62,8 +58,6 @@ export default function App() {
         <main className="flex-1 overflow-auto">
           <div className="p-4">
             {tab === 'dashboard' && <DashboardPage />}
-            {tab === 'add' && <AddProductPage />}
-            {tab === 'list' && <ProductListPage />}
             {tab === 'coderisk' && <CodeRiskPage />}
             {tab === 'fileswitch' && <FileSwitchRatePage />}
             {tab === 'focusstreak' && <FocusStreakPage />}
