@@ -1,11 +1,11 @@
-import { TodoItemCard } from "./TodoItemCard";
 import { TodoFilters } from "./TodoFilters";
+import { TodoList } from "./TodoList";
 import { useTodoTracker } from "../hooks/useTodoTracker";
 import { useState } from "react";
 import { Button, Input, Textarea } from "../../../components/ui";
 
 export function TodoPanel() {
-  const { projectName, openTodos, todos, error, refresh, scanWorkspace, syncProject, addManualTodo, updateTodo, pickFileFromWorkspace, markResolved, openFile } = useTodoTracker();
+  const { projectName, todos, error, refresh, scanWorkspace, syncProject, addManualTodo, updateTodo, pickFileFromWorkspace, markResolved, openFile } = useTodoTracker();
   type TodoStatus = "open" | "in_progress" | "resolved";
   type TodoPriority = "" | "low" | "medium" | "high" | "urgent";
   const [showManualForm, setShowManualForm] = useState(false);
@@ -235,24 +235,13 @@ export function TodoPanel() {
         ) : null}
       </div>
 
-      {openTodos.length === 0 ? (
-        <div className="rounded-xl border border-vscode-widget-border bg-vscode-widget-bg p-6 text-sm text-vscode-descriptionForeground">
-          No open TODOs. Add comments like <code>// TODO: ...</code> and save.
-        </div>
-      ) : (
-        <div className="grid gap-3">
-          {openTodos.map(todo => (
-            <TodoItemCard
-              key={todo.id}
-              todo={todo}
-              onOpen={openFile}
-              onResolve={markResolved}
-              onUpdate={updateTodo}
-              onPickFile={pickFileFromWorkspace}
-            />
-          ))}
-        </div>
-      )}
+      <TodoList
+        todos={todos}
+        onOpen={openFile}
+        onResolve={markResolved}
+        onUpdate={updateTodo}
+        onPickFile={pickFileFromWorkspace}
+      />
     </div>
   );
 }

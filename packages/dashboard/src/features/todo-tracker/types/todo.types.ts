@@ -8,6 +8,10 @@ export interface TodoItem {
   line: number;
   status: TodoStatus;
 
+  // May be missing for older stored todos.
+  createdAt?: string;
+  updatedAt?: string;
+
   priority?: TodoPriority;
   labels?: string[];
   deadlineISO?: string | null;

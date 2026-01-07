@@ -43,6 +43,11 @@ export function TodoItemCard(props: {
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
+            {todo.status === "resolved" ? (
+              <span className="text-[11px] px-2 py-1 rounded-full border border-vscode-widget-border bg-vscode-list-hover-bg text-vscode-foreground font-semibold">
+                RESOLVED
+              </span>
+            ) : null}
             {todo.priority ? (
               <span
                 className={
