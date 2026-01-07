@@ -1,4 +1,4 @@
-import { randomUUID } from "crypto";
+import { stableTodoId } from "./todoLifecycle";
 
 export interface ParsedTodo {
   id: string;
@@ -6,6 +6,7 @@ export interface ParsedTodo {
   filePath: string;
   line: number;
   status: "open";
+  source: "scan";
   createdAt: string;
   updatedAt: string;
 }
@@ -16,7 +17,7 @@ const TODO_PATTERNS = [
   /BUG[:\s-]+(.+)/i,
 ];
 
-export function parseTodosFromText(text: string, filePath: string): ParsedTodo[] {
+export function parseTodosFromText(text: string, projectId: string, filePath: string): ParsedTodo[] {
   const lines = text.split(/\r?\n/);
   const now = new Date().toISOString();
   const todos: ParsedTodo[] = [];
@@ -27,11 +28,12 @@ export function parseTodosFromText(text: string, filePath: string): ParsedTodo[]
       const m = lineText.match(pat);
       if (m && m[1]) {
         todos.push({
-          id: randomUUID(),
+          id: stableTodoId(projectId, filePath, i + 1, m[1].trim()),
           text: m[1].trim(),
           filePath,
           line: i + 1,
           status: "open",
+          source: "scan",
           createdAt: now,
           updatedAt: now,
         });

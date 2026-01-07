@@ -25,6 +25,13 @@ router.get('/health', controller.health);
 // recommended combined endpoint
 router.post('/enrich', controller.enrich);
 
+// DB persistence (explicit sync from extension)
+router.post('/sync', controller.syncProject);
+
+// Project selection + pull todos
+router.get('/projects', controller.listProjects);
+router.get('/projects/:projectId/todos', controller.getProjectTodos);
+
 // optional separated endpoints
 router.post('/analyze', controller.analyze);
 router.post('/associate', controller.associate);

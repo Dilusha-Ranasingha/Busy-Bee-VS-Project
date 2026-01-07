@@ -1,6 +1,13 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { Logger } from '../logger/logger';
+
+type ProductDashboardDeps = {
+  logger: Logger;
+  todoTracker: any;
+  projectResolver: { getActiveProjectContext: () => any };
+};
 
 export class ProductDashboardViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'busyBee.productDashboard';
@@ -9,6 +16,7 @@ export class ProductDashboardViewProvider implements vscode.WebviewViewProvider 
 
   constructor(
     private readonly _extensionUri: vscode.Uri,
+    private readonly deps?: ProductDashboardDeps,
   ) {}
 
   public resolveWebviewView(
@@ -34,16 +42,142 @@ export class ProductDashboardViewProvider implements vscode.WebviewViewProvider 
     this._updateTheme();
 
     // Handle messages from the webview
-    webviewView.webview.onDidReceiveMessage(data => {
-      switch (data.type) {
-        case 'info':
-          vscode.window.showInformationMessage(data.message);
-          break;
-        case 'error':
-          vscode.window.showErrorMessage(data.message);
-          break;
+    webviewView.webview.onDidReceiveMessage(async (data) => {
+      // Keep existing product message behavior
+      if (data?.type === 'info') {
+        vscode.window.showInformationMessage(data.message);
+        return;
+      }
+      if (data?.type === 'error') {
+        vscode.window.showErrorMessage(data.message);
+        return;
+      }
+
+      // If TODO tracker deps are available, allow the TODO tab in this dashboard
+      // to fully function (messages route to the extension controller).
+      if (!this.deps) {
+        return;
+      }
+
+      const { logger, todoTracker, projectResolver } = this.deps;
+
+      try {
+        switch (data?.type) {
+          case 'TODO/GET':
+            logger.info('[ProductDashboard] TODO/GET');
+            await this._sendTodoState();
+            break;
+
+          case 'TODO/SCAN':
+            logger.info('[ProductDashboard] TODO/SCAN');
+            await todoTracker.scanWorkspaceNow();
+            await this._sendTodoState();
+            break;
+
+          case 'TODO/SYNC_PROJECT':
+            logger.info('[ProductDashboard] TODO/SYNC_PROJECT');
+            if (typeof todoTracker.syncProjectNow === 'function') {
+              await todoTracker.syncProjectNow();
+            }
+            await this._sendTodoState();
+            break;
+
+          case 'TODO/ADD_MANUAL':
+            logger.info('[ProductDashboard] TODO/ADD_MANUAL');
+            if (typeof todoTracker.addManualTodo === 'function') {
+              await todoTracker.addManualTodo(data?.payload);
+            }
+            await this._sendTodoState();
+            break;
+
+          case 'TODO/UPDATE':
+            logger.info('[ProductDashboard] TODO/UPDATE');
+            if (data?.payload?.id && typeof todoTracker.updateTodo === 'function') {
+              await todoTracker.updateTodo(data.payload);
+            }
+            await this._sendTodoState();
+            break;
+
+          case 'TODO/PICK_FILE': {
+            logger.info('[ProductDashboard] TODO/PICK_FILE');
+            const ctx = projectResolver.getActiveProjectContext();
+            const workspaceRoot = ctx?.workspaceRoot;
+            const picked = await vscode.window.showOpenDialog({
+              canSelectMany: false,
+              canSelectFiles: true,
+              canSelectFolders: false,
+              defaultUri: workspaceRoot,
+              openLabel: 'Use file',
+            });
+
+            if (!picked || picked.length === 0) {
+              this._view?.webview.postMessage({ type: 'TODO/FILE_PICKED', payload: { filePath: null } });
+              break;
+            }
+
+            const rel = vscode.workspace.asRelativePath(picked[0], false);
+            this._view?.webview.postMessage({ type: 'TODO/FILE_PICKED', payload: { filePath: rel } });
+            break;
+          }
+
+          case 'TODO/MARK_RESOLVED':
+            logger.info('[ProductDashboard] TODO/MARK_RESOLVED');
+            if (data?.payload?.id) {
+              await todoTracker.markResolved(data.payload.id);
+            }
+            await this._sendTodoState();
+            break;
+
+          case 'TODO/OPEN_FILE':
+            logger.info('[ProductDashboard] TODO/OPEN_FILE');
+            if (data?.payload?.filePath) {
+              const uri = this._resolveWorkspaceFile(data.payload.filePath);
+              if (uri) {
+                const doc = await vscode.workspace.openTextDocument(uri);
+                const editor = await vscode.window.showTextDocument(doc, { preview: true });
+
+                if (typeof data.payload.line === 'number' && data.payload.line > 0) {
+                  const line = Math.max(0, data.payload.line - 1);
+                  const pos = new vscode.Position(line, 0);
+                  editor.selection = new vscode.Selection(pos, pos);
+                  editor.revealRange(new vscode.Range(pos, pos));
+                }
+              }
+            }
+            break;
+        }
+      } catch (e: any) {
+        logger.warn(`[ProductDashboard] TODO message failed: ${e?.message ?? String(e)}`);
+        this._view?.webview.postMessage({
+          type: 'TODO/ERROR',
+          payload: { message: e?.message ?? 'Unknown error' },
+        });
       }
     });
+  }
+
+  private async _sendTodoState() {
+    if (!this._view || !this.deps) return;
+    const ctx = typeof this.deps.todoTracker.getProjectInfo === 'function'
+      ? this.deps.todoTracker.getProjectInfo()
+      : this.deps.projectResolver.getActiveProjectContext();
+    const todos = this.deps.todoTracker.getTodos();
+
+    this._view.webview.postMessage({
+      type: 'TODO/STATE',
+      payload: {
+        projectId: ctx?.projectId ?? null,
+        projectName: ctx?.projectName ?? null,
+        todos,
+      },
+    });
+  }
+
+  private _resolveWorkspaceFile(relPath: string): vscode.Uri | null {
+    const ctx = this.deps?.projectResolver.getActiveProjectContext();
+    const root = ctx?.workspaceRoot;
+    if (!root) return null;
+    return vscode.Uri.joinPath(root, relPath);
   }
 
   private _updateTheme() {
@@ -109,6 +243,16 @@ export class ProductDashboardViewProvider implements vscode.WebviewViewProvider 
       </head>
       <body>
         <div id="root"></div>
+        <script>
+          // Bridge: create a stable VS Code API object early and expose it for the bundle.
+          try {
+            if (typeof acquireVsCodeApi === 'function') {
+              const __vscode = acquireVsCodeApi();
+              window.__BUSY_BEE_VSCODE_API__ = __vscode;
+              window.acquireVsCodeApi = () => __vscode;
+            }
+          } catch {}
+        </script>
         <script type="module">
           // Connect to development server
           import('http://localhost:5173/@vite/client');
@@ -126,6 +270,12 @@ export class ProductDashboardViewProvider implements vscode.WebviewViewProvider 
 
     if (fs.existsSync(indexPath)) {
       let html = fs.readFileSync(indexPath, 'utf-8');
+
+      // Inject API bridge before closing head (safe)
+      html = html.replace(
+        '</head>',
+        `<script>try{if(typeof acquireVsCodeApi==='function'){const __vscode=acquireVsCodeApi();window.__BUSY_BEE_VSCODE_API__=__vscode;window.acquireVsCodeApi=()=>__vscode;}}catch{}</script></head>`
+      );
       
       // Replace asset paths with webview URIs
       html = html.replace(
@@ -134,8 +284,13 @@ export class ProductDashboardViewProvider implements vscode.WebviewViewProvider 
           if (assetPath.startsWith('http') || assetPath.startsWith('//')) {
             return match;
           }
+          // Vite build commonly emits absolute paths like "/assets/...".
+          // In a VS Code webview, we need to resolve these relative to the built dashboard folder.
+          const normalizedAssetPath = typeof assetPath === "string" && assetPath.startsWith("/")
+            ? assetPath.slice(1)
+            : assetPath;
           const assetUri = webview.asWebviewUri(
-            vscode.Uri.file(path.join(dashboardPath, assetPath))
+            vscode.Uri.file(path.join(dashboardPath, normalizedAssetPath))
           );
           return `${attr}="${assetUri}"`;
         }

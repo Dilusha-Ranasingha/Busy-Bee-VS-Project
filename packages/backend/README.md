@@ -77,7 +77,7 @@ Create a `.env` file in the root directory with the following variables:
 
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5432/busybee
-PORT=3000
+PORT=5693
 NODE_ENV=development
 ```
 

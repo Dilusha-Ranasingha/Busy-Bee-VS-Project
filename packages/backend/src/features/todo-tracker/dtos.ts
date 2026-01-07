@@ -66,3 +66,28 @@ export interface SummarizeRequestDTO {
 export interface SummarizeResponseDTO {
   summaries: Array<{ id: string; summary: string }>;
 }
+
+// -----------------------------
+// Persistence (DB sync)
+// -----------------------------
+
+export interface SyncProjectRequestDTO {
+  projectId: string;
+  projectName?: string | null;
+  todos: Array<{
+    id: string;
+    text: string;
+    filePath: string;
+    line: number;
+    status: "open" | "in_progress" | "resolved";
+    priority?: TodoPriority;
+    labels?: string[];
+    deadlineISO?: string | null;
+    urgencyScore?: number; // 0..1
+  }>;
+}
+
+export interface SyncProjectResponseDTO {
+  ok: true;
+  upserted: number;
+}

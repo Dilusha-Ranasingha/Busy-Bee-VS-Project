@@ -9,6 +9,10 @@ interface VsCodeApi {
   setState(state: any): void;
 }
 
+// VS Code injects this into webviews.
+// Using `typeof acquireVsCodeApi` is safe even when it's not defined.
+declare const acquireVsCodeApi: undefined | (() => VsCodeApi);
+
 declare global {
   interface Window {
     acquireVsCodeApi?: () => VsCodeApi;
@@ -25,9 +29,15 @@ class VsCodeTheme {
 
   private init() {
     // Check if running in VS Code webview
-    if (typeof window.acquireVsCodeApi === 'function') {
+    const anyWindow = window as any;
+    const acquire =
+      (typeof acquireVsCodeApi === "function" && acquireVsCodeApi) ||
+      (typeof anyWindow.acquireVsCodeApi === "function" && anyWindow.acquireVsCodeApi) ||
+      (typeof (globalThis as any).acquireVsCodeApi === "function" && (globalThis as any).acquireVsCodeApi);
+
+    if (typeof acquire === 'function') {
       try {
-        this.vscode = window.acquireVsCodeApi();
+        this.vscode = acquire();
         this.isVsCodeContext = true;
         this.setupThemeListener();
         console.log('✅ VS Code webview context detected');

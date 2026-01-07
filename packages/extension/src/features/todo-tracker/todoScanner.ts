@@ -1,7 +1,7 @@
 import * as vscode from "vscode";
 import { parseTodosFromText, ParsedTodo } from "./todoParser";
 
-export async function scanWorkspaceTodos(workspaceRoot: vscode.Uri): Promise<any[]> {
+export async function scanWorkspaceTodos(workspaceRoot: vscode.Uri, projectId: string): Promise<any[]> {
   // scan text files; adjust include patterns later
   const files = await vscode.workspace.findFiles(
     new vscode.RelativePattern(workspaceRoot, "**/*.{ts,tsx,js,jsx,py,java,cs,go,php,rb,md}"),
@@ -13,7 +13,7 @@ export async function scanWorkspaceTodos(workspaceRoot: vscode.Uri): Promise<any
   for (const uri of files) {
     const doc = await vscode.workspace.openTextDocument(uri);
     const relPath = vscode.workspace.asRelativePath(uri, false);
-    const parsed = parseTodosFromText(doc.getText(), relPath);
+    const parsed = parseTodosFromText(doc.getText(), projectId, relPath);
     all.push(...parsed);
   }
   return all;
@@ -32,7 +32,7 @@ scanWorkspaceTodos.listCandidateFiles = async (workspaceRoot: vscode.Uri) => {
   }));
 };
 
-export async function scanSingleDocumentTodos(doc: vscode.TextDocument): Promise<ParsedTodo[]> {
+export async function scanSingleDocumentTodos(doc: vscode.TextDocument, projectId: string): Promise<ParsedTodo[]> {
   const relPath = vscode.workspace.asRelativePath(doc.uri, false);
-  return parseTodosFromText(doc.getText(), relPath);
+  return parseTodosFromText(doc.getText(), projectId, relPath);
 }

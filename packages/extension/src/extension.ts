@@ -15,8 +15,26 @@ export async function activate(context: vscode.ExtensionContext) {
   const logger = new Logger("busy-bee-vs", "info");
   logger.info('Extension activating...');
 
-  // ✅ Keep your existing Product Dashboard webview
-  const dashboardProvider = new ProductDashboardViewProvider(context.extensionUri);
+  // 1) Project context (workspace scoped)
+  const projectResolver = createProjectContextResolver(logger);
+
+  // 2) Storage (Option A + fallback B)
+  const storageManager = createStorageManager(context, logger);
+
+  // 3) Feature init (controller)
+  const todoTracker = registerTodoTracker({
+    context,
+    logger,
+    projectResolver,
+    storageManager,
+  });
+
+  // ✅ Product Dashboard webview (also supports TODO tab messaging)
+  const dashboardProvider = new ProductDashboardViewProvider(context.extensionUri, {
+    logger,
+    todoTracker,
+    projectResolver,
+  });
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
       ProductDashboardViewProvider.viewType,
@@ -36,19 +54,6 @@ export async function activate(context: vscode.ExtensionContext) {
   // ✅ TODO Tracker wiring starts
   // -------------------------------
 
-  // 1) Project context (workspace scoped)
-  const projectResolver = createProjectContextResolver(logger);
-
-  // 2) Storage (Option A + fallback B)
-  const storageManager = createStorageManager(context, logger);
-
-  // 3) Feature init (controller)
-  const todoTracker = registerTodoTracker({
-    context,
-    logger,
-    projectResolver,
-    storageManager,
-  });
   const todoDashboardProvider = new TodoDashboardViewProvider(context.extensionUri, {
 	logger,
 	todoTracker,

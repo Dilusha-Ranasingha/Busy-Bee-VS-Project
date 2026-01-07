@@ -2,6 +2,7 @@ import type {
   AnalyzeTodoRequestDTO,
   AssociateRequestDTO,
   EnrichRequestDTO,
+  SyncProjectRequestDTO,
   SummarizeRequestDTO,
 } from "./dtos";
 
@@ -68,4 +69,35 @@ export function validateSummarizeRequest(body: any): SummarizeRequestDTO {
     return { id: t.id, text: t.text, priority: t.priority, filePath: t.filePath };
   });
   return { todos };
+}
+
+export function validateSyncProjectRequest(body: any): SyncProjectRequestDTO {
+  assertString(body?.projectId, "projectId");
+  assertArray(body?.todos, "todos");
+
+  const todos = body.todos.map((t: any) => {
+    assertString(t?.id, "todos[].id");
+    assertString(t?.text, "todos[].text");
+    assertString(t?.filePath, "todos[].filePath");
+    if (!Number.isFinite(t?.line)) throw new Error("todos[].line must be a number");
+    assertString(t?.status, "todos[].status");
+
+    return {
+      id: t.id,
+      text: t.text,
+      filePath: t.filePath,
+      line: Number(t.line),
+      status: t.status,
+      priority: t.priority,
+      labels: Array.isArray(t.labels) ? t.labels : undefined,
+      deadlineISO: typeof t.deadlineISO === "string" || t.deadlineISO === null ? t.deadlineISO : undefined,
+      urgencyScore: Number.isFinite(t.urgencyScore) ? Number(t.urgencyScore) : undefined,
+    };
+  });
+
+  return {
+    projectId: body.projectId,
+    projectName: typeof body.projectName === "string" || body.projectName === null ? body.projectName : undefined,
+    todos,
+  };
 }

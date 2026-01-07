@@ -4,7 +4,7 @@ dotenv.config();
 import { connectDB } from './config/db.js';
 import app from './api/app.js';
 
-const port = Number(process.env.PORT ?? 5050);
+const port = Number(process.env.PORT ?? 5693);
 
 connectDB()
   .then(() => {
@@ -14,3 +14,5 @@ connectDB()
     console.error('DB connection failed:', err);
     process.exit(1);
   });
+
+  

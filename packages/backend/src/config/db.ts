@@ -16,23 +16,44 @@ interface DatabaseConfig {
 }
 
 export async function connectDB(): Promise<pg.Pool> {
-  if (!process.env.POSTGRES_USER || !process.env.POSTGRES_HOST || !process.env.POSTGRES_DB || 
-      !process.env.POSTGRES_PASSWORD || !process.env.POSTGRES_PORT) {
-    throw new Error('Missing required database environment variables');
+  // Preferred config: DATABASE_URL (matches packages/backend/.env)
+  if (process.env.DATABASE_URL) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    });
+  } else {
+    // Legacy config: individual POSTGRES_* vars
+    const host = process.env.POSTGRES_HOST ?? process.env.PGHOST;
+    const portRaw = process.env.POSTGRES_PORT ?? process.env.PGPORT;
+
+    if (
+      !process.env.POSTGRES_USER ||
+      !host ||
+      !process.env.POSTGRES_DB ||
+      !process.env.POSTGRES_PASSWORD ||
+      !portRaw
+    ) {
+      throw new Error(
+        'Missing required database environment variables. Provide DATABASE_URL or POSTGRES_USER/POSTGRES_PASSWORD/POSTGRES_DB/POSTGRES_HOST/POSTGRES_PORT.'
+      );
+    }
+
+    const config: DatabaseConfig = {
+      user: process.env.POSTGRES_USER,
+      host,
+      database: process.env.POSTGRES_DB,
+      password: process.env.POSTGRES_PASSWORD,
+      port: parseInt(portRaw, 10),
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+    };
+
+    pool = new Pool(config);
   }
-
-  const config: DatabaseConfig = {
-    user: process.env.POSTGRES_USER,
-    host: process.env.POSTGRES_HOST,
-    database: process.env.POSTGRES_DB,
-    password: process.env.POSTGRES_PASSWORD,
-    port: parseInt(process.env.POSTGRES_PORT),
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-  };
-
-  pool = new Pool(config);
 
   // Test the connection
   try {
