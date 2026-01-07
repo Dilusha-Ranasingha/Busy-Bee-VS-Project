@@ -15,8 +15,10 @@ import { IdleSessionsPage } from './pages/Metrics-Tracking/IdleSessions';
 import { CodeRiskPage } from './pages/Code-Risk';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
+import ForecastingPage from './pages/Forecasting';
+import ChatbotPage from './pages/Chatbot';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits' | 'idle' | 'coderisk';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits' | 'idle' | 'coderisk' | 'forecasting' | 'chatbot' |;
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -33,6 +35,9 @@ const NAV_ITEMS = [
   { id: 'commitedits', label: 'Commit Edits', icon: GitCommit },
   { id: 'idle', label: 'Idle Time', icon: Coffee },
 ];
+
+
+
 
 export default function App() {
   const [tab, setTab] = useState<Tab>('dashboard');

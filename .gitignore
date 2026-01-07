@@ -4,3 +4,16 @@ dist
 .vscode-test-web/
 .env
 .DS_Store
+
+
+# ===== ML / Python =====
+packages/ml-service/.venv/
+packages/ml-service/__pycache__/
+packages/ml-service/**/*.pyc
+packages/ml-service/.env
+
+# ML model artifacts (future)
+packages/ml-service/models/
+packages/ml-service/**/*.pkl
+packages/ml-service/**/*.joblib
+packages/ml-service/**/*.onnx

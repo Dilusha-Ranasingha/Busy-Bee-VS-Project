@@ -1,4 +1,13 @@
--- Create products table
+-- =====================================================
+-- Busy Bee - Database Initialization
+-- Runs automatically ONLY when the Postgres volume is new
+-- =====================================================
+
+
+-- =====================================================
+-- SAMPLE FEATURE (KEEP AS IS)
+-- =====================================================
+
 CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
@@ -21,6 +30,283 @@ CREATE TABLE IF NOT EXISTS file_switch_windows (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
 
   user_id TEXT NOT NULL,                -- GitHub user ID
+CREATE INDEX IF NOT EXISTS idx_products_created_at
+ON products(created_at DESC);
+
+
+-- =====================================================
+-- MEMBER 01 OUTPUT (ASSUMED TABLE)
+-- Daily Focus Summary (your ML input)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS daily_focus_summary (
+    user_id VARCHAR(100) NOT NULL,
+    date DATE NOT NULL,
+
+    total_focus_minutes INTEGER NOT NULL,
+
+    max_focus_streak_min INTEGER,
+    avg_focus_streak_min INTEGER,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_daily_focus_summary PRIMARY KEY (user_id, date)
+);
+
+
+-- =====================================================
+-- FORECASTING MODULE OUTPUT
+-- ML Predictions table
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS forecast_daily_productivity (
+    id SERIAL PRIMARY KEY,
+
+    user_id VARCHAR(100) NOT NULL,
+    target_date DATE NOT NULL,
+
+    predicted_focus_minutes INTEGER NOT NULL,
+
+    lower_bound INTEGER,
+    upper_bound INTEGER,
+
+    model_version VARCHAR(50),
+    horizon_days INTEGER,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Prevent duplicates for same user/day/model/horizon
+CREATE UNIQUE INDEX IF NOT EXISTS uq_forecast_user_date_model_horizon
+ON forecast_daily_productivity(user_id, target_date, model_version, horizon_days);
+
+
+-- =====================================================
+-- KPI PLACEHOLDER TABLE #1 (Idle sessions)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS daily_idle_summary (
+    user_id VARCHAR(100) NOT NULL,
+    date DATE NOT NULL,
+
+    idle_minutes NUMERIC(6,1) NOT NULL DEFAULT 0,
+    idle_sessions INTEGER NOT NULL DEFAULT 0,
+    avg_idle_session_min NUMERIC(5,1) NOT NULL DEFAULT 0,
+    longest_idle_session_min NUMERIC(5,1) NOT NULL DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_daily_idle_summary PRIMARY KEY (user_id, date)
+);
+
+
+-- =====================================================
+-- KPI PLACEHOLDER TABLE #2 (Error fix sessions)
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS daily_error_summary (
+    user_id VARCHAR(100) NOT NULL,
+    date DATE NOT NULL,
+
+    error_count INTEGER NOT NULL DEFAULT 0,
+    avg_fix_time_min NUMERIC(5,1) NOT NULL DEFAULT 0,
+    total_fix_time_min NUMERIC(6,1) NOT NULL DEFAULT 0,
+    long_fix_count INTEGER NOT NULL DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_daily_error_summary PRIMARY KEY (user_id, date)
+);
+
+
+-- =====================================================
+-- KPI PLACEHOLDER TABLE #3 (Time-of-day focus)
+-- This is the "day vs night focus" table you asked for
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS daily_time_focus_summary (
+    user_id VARCHAR(100) NOT NULL,
+    date DATE NOT NULL,
+
+    day_focus_minutes INTEGER NOT NULL DEFAULT 0,
+    night_focus_minutes INTEGER NOT NULL DEFAULT 0,
+
+    day_sessions INTEGER NOT NULL DEFAULT 0,
+    night_sessions INTEGER NOT NULL DEFAULT 0,
+
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT pk_daily_time_focus_summary PRIMARY KEY (user_id, date)
+);
+
+
+-- =====================================================
+-- SEED DATA (30 days) - testUser
+-- Enough history for lags + rolling features
+-- =====================================================
+
+-- Focus seed: 2025-12-01 .. 2025-12-30
+INSERT INTO daily_focus_summary (
+    user_id, date, total_focus_minutes, max_focus_streak_min, avg_focus_streak_min
+)
+SELECT
+  'testUser' AS user_id,
+  d::date AS date,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 85
+      ELSE 120 + (EXTRACT(DOW FROM d)::int * 4)
+    END
+  )::int AS total_focus_minutes,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 30
+      ELSE 45 + (EXTRACT(DOW FROM d)::int * 2)
+    END
+  )::int AS max_focus_streak_min,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 18
+      ELSE 22 + (EXTRACT(DOW FROM d)::int)
+    END
+  )::int AS avg_focus_streak_min
+FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') AS d
+ON CONFLICT (user_id, date) DO NOTHING;
+
+
+-- Idle seed
+INSERT INTO daily_idle_summary (
+    user_id, date, idle_minutes, idle_sessions, avg_idle_session_min, longest_idle_session_min
+)
+SELECT
+  'testUser' AS user_id,
+  d::date AS date,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 70 + (EXTRACT(DOW FROM d)::int * 2)
+      ELSE 35 + (EXTRACT(DOW FROM d)::int * 3)
+    END
+  )::numeric(6,1) AS idle_minutes,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 5
+      ELSE 3
+    END
+  )::int AS idle_sessions,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 14.0
+      ELSE 9.5
+    END
+  )::numeric(5,1) AS avg_idle_session_min,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 35.0
+      ELSE 22.0
+    END
+  )::numeric(5,1) AS longest_idle_session_min
+FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') AS d
+ON CONFLICT (user_id, date) DO NOTHING;
+
+
+-- Error seed
+INSERT INTO daily_error_summary (
+    user_id, date, error_count, avg_fix_time_min, total_fix_time_min, long_fix_count
+)
+SELECT
+  'testUser' AS user_id,
+  d::date AS date,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 1
+      WHEN EXTRACT(DOW FROM d) IN (2,3) THEN 4
+      ELSE 2
+    END
+  )::int AS error_count,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (2,3) THEN 11.0
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 6.0
+      ELSE 8.0
+    END
+  )::numeric(5,1) AS avg_fix_time_min,
+  (
+    (
+      CASE
+        WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 1
+        WHEN EXTRACT(DOW FROM d) IN (2,3) THEN 4
+        ELSE 2
+      END
+    ) *
+    (
+      CASE
+        WHEN EXTRACT(DOW FROM d) IN (2,3) THEN 11.0
+        WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 6.0
+        ELSE 8.0
+      END
+    )
+  )::numeric(6,1) AS total_fix_time_min,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (2,3) THEN 2
+      ELSE 0
+    END
+  )::int AS long_fix_count
+FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') AS d
+ON CONFLICT (user_id, date) DO NOTHING;
+
+
+-- Time-of-day seed (day vs night)
+-- We simulate that weekdays have more day-focus; weekends more night-focus.
+INSERT INTO daily_time_focus_summary (
+    user_id, date, day_focus_minutes, night_focus_minutes, day_sessions, night_sessions
+)
+SELECT
+  'testUser' AS user_id,
+  d::date AS date,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 30
+      ELSE 80 + (EXTRACT(DOW FROM d)::int * 3)
+    END
+  )::int AS day_focus_minutes,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 55
+      ELSE 40 + (EXTRACT(DOW FROM d)::int * 1)
+    END
+  )::int AS night_focus_minutes,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 1
+      ELSE 3
+    END
+  )::int AS day_sessions,
+  (
+    CASE
+      WHEN EXTRACT(DOW FROM d) IN (0,6) THEN 3
+      ELSE 2
+    END
+  )::int AS night_sessions
+FROM generate_series('2025-12-01'::date, '2025-12-30'::date, interval '1 day') AS d
+ON CONFLICT (user_id, date) DO NOTHING;
+
+
+-- =====================================================
+-- DETAILED TRACKING TABLES (Raw Event Data)
+-- These tables store session-level events that feed into the daily summaries above
+-- =====================================================
+
+-- Enable uuid generation for detailed tracking tables
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+
+-- =====================================================
+-- File Switching Metrics (Session Windows)
+-- =====================================================
+CREATE TABLE IF NOT EXISTS file_switch_windows (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  user_id TEXT NOT NULL,
   session_id TEXT NOT NULL,
   window_start TIMESTAMPTZ NOT NULL,
   window_end   TIMESTAMPTZ NOT NULL,
@@ -33,6 +319,10 @@ CREATE TABLE IF NOT EXISTS file_switch_windows (
 
   workspace_tag TEXT NULL,
 
+  activation_count INT NOT NULL CHECK (activation_count >= 0),
+  rate_per_min NUMERIC(10, 4) NOT NULL CHECK (rate_per_min >= 0),
+
+  workspace_tag TEXT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -46,6 +336,14 @@ CREATE INDEX IF NOT EXISTS idx_file_switch_windows_user_id
   ON file_switch_windows (user_id, created_at DESC);
 
 -- Focus Streaks table
+CREATE INDEX IF NOT EXISTS idx_file_switch_windows_created_at
+  ON file_switch_windows (created_at);
+CREATE INDEX IF NOT EXISTS idx_file_switch_windows_user_id
+  ON file_switch_windows (user_id, created_at DESC);
+
+-- =====================================================
+-- Focus Streaks (Global and Per-File)
+-- =====================================================
 CREATE TABLE IF NOT EXISTS focus_streaks (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
@@ -58,6 +356,9 @@ CREATE TABLE IF NOT EXISTS focus_streaks (
   language TEXT,
   
   -- Timing
+  file_hash TEXT,
+  language TEXT,
+  
   start_ts TIMESTAMPTZ NOT NULL,
   end_ts TIMESTAMPTZ NOT NULL,
   duration_min NUMERIC NOT NULL,
@@ -71,6 +372,9 @@ CREATE INDEX IF NOT EXISTS idx_focus_streaks_user_language ON focus_streaks(user
 CREATE INDEX IF NOT EXISTS idx_focus_streaks_start ON focus_streaks(start_ts DESC);
 
 -- Edit Sessions table (Edits per Minute tracking)
+-- =====================================================
+-- Edit Sessions (Edits per Minute tracking)
+-- =====================================================
 CREATE TABLE IF NOT EXISTS sessions_edits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
@@ -109,6 +413,9 @@ CREATE INDEX IF NOT EXISTS idx_sessions_edits_start ON sessions_edits(start_ts D
 CREATE INDEX IF NOT EXISTS idx_sessions_edits_session ON sessions_edits(session_id);
 
 -- Save-to-Edit Ratio Sessions table
+-- =====================================================
+-- Save-to-Edit Ratio Sessions
+-- =====================================================
 CREATE TABLE IF NOT EXISTS save_edit_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id TEXT NOT NULL,
@@ -124,6 +431,8 @@ CREATE TABLE IF NOT EXISTS save_edit_sessions (
   edits_total INT NOT NULL,
   
   -- Raw save counts
+  edits_total INT NOT NULL,
+  
   saves_manual INT NOT NULL,
   saves_autosave_delay INT NOT NULL,
   saves_autosave_focusout INT NOT NULL,
@@ -133,6 +442,9 @@ CREATE TABLE IF NOT EXISTS save_edit_sessions (
   checkpoint_autosave_count INT NOT NULL,
   
   -- Ratios
+  autosaves_effective INT NOT NULL,
+  checkpoint_autosave_count INT NOT NULL,
+  
   save_to_edit_ratio_manual NUMERIC NOT NULL,
   save_to_edit_ratio_autosave NUMERIC NOT NULL,
   effective_save_to_edit_ratio NUMERIC NOT NULL,
@@ -142,6 +454,9 @@ CREATE TABLE IF NOT EXISTS save_edit_sessions (
   median_secs_between_saves NUMERIC,
   
   -- Context
+  avg_secs_between_saves NUMERIC,
+  median_secs_between_saves NUMERIC,
+  
   manual_save_share NUMERIC,
   collapse_window_sec INT DEFAULT 60,
   
@@ -154,6 +469,9 @@ CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_start ON save_edit_sessions(st
 CREATE INDEX IF NOT EXISTS idx_save_edit_sessions_session ON save_edit_sessions(session_id);
 
 -- Diagnostic Density Sessions (session-based: start when errors appear, end when resolved)
+-- =====================================================
+-- Diagnostic Density Sessions
+-- =====================================================
 CREATE TABLE IF NOT EXISTS diagnostic_density_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -187,6 +505,9 @@ CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_highest ON diagnostic
 CREATE INDEX IF NOT EXISTS idx_diagnostic_density_sessions_session ON diagnostic_density_sessions(session_id);
 
 -- Error Fix Time Sessions (per-error tracking: appearance to resolution)
+-- =====================================================
+-- Error Fix Time Sessions
+-- =====================================================
 CREATE TABLE IF NOT EXISTS error_fix_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -201,6 +522,9 @@ CREATE TABLE IF NOT EXISTS error_fix_sessions (
   severity TEXT NOT NULL CHECK (severity IN ('error', 'warning')),
   
   -- Session timing
+  error_key TEXT NOT NULL,
+  severity TEXT NOT NULL CHECK (severity IN ('error', 'warning')),
+  
   start_ts TIMESTAMPTZ NOT NULL,
   end_ts TIMESTAMPTZ NOT NULL,
   duration_sec INT NOT NULL CHECK (duration_sec >= 60),
@@ -214,6 +538,9 @@ CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_duration ON error_fix_sessions
 CREATE INDEX IF NOT EXISTS idx_error_fix_sessions_severity ON error_fix_sessions(user_id, severity);
 
 -- Task Runs (Build/Test) - Per-Run Tracking with Live Counters
+-- =====================================================
+-- Task Runs (Build/Test)
+-- =====================================================
 CREATE TABLE IF NOT EXISTS task_runs (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -225,6 +552,9 @@ CREATE TABLE IF NOT EXISTS task_runs (
   kind TEXT NOT NULL CHECK (kind IN ('test', 'build')),
   
   -- Timing
+  label TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('test', 'build')),
+  
   start_ts TIMESTAMPTZ NOT NULL,
   end_ts TIMESTAMPTZ NOT NULL,
   duration_sec INT NOT NULL,
@@ -233,6 +563,8 @@ CREATE TABLE IF NOT EXISTS task_runs (
   result TEXT NOT NULL CHECK (result IN ('pass', 'fail', 'cancelled')),
   
   -- Optional metadata
+  result TEXT NOT NULL CHECK (result IN ('pass', 'fail', 'cancelled')),
+  
   pid INT,
   is_watch_like BOOLEAN DEFAULT FALSE,
   
@@ -245,6 +577,9 @@ CREATE INDEX IF NOT EXISTS idx_task_runs_kind ON task_runs(user_id, kind, result
 CREATE INDEX IF NOT EXISTS idx_task_runs_result ON task_runs(user_id, result);
 
 -- Commit-per-Edit Sessions (Edits before Commit)
+-- =====================================================
+-- Commit-per-Edit Sessions
+-- =====================================================
 CREATE TABLE IF NOT EXISTS commit_edit_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   
@@ -283,6 +618,9 @@ CREATE INDEX IF NOT EXISTS idx_commit_edit_sessions_today ON commit_edit_session
 -- ============================================================
 -- 9) Idle Sessions (Distraction Detection)
 -- ============================================================
+-- =====================================================
+-- Idle Sessions (Distraction Detection)
+-- =====================================================
 CREATE TABLE IF NOT EXISTS idle_sessions (
   id SERIAL PRIMARY KEY,
   
@@ -300,6 +638,9 @@ CREATE TABLE IF NOT EXISTS idle_sessions (
   
   -- Optional metadata
   ended_reason TEXT, -- 'activity', 'vscode_close', 'os_sleep_wake'
+  threshold_min INT NOT NULL DEFAULT 15,
+  
+  ended_reason TEXT,
   
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -312,6 +653,9 @@ CREATE INDEX IF NOT EXISTS idx_idle_sessions_shortest ON idle_sessions(user_id, 
 -- ============================================================
 -- 10) Daily Metrics (Aggregated Summary per User per Day)
 -- ============================================================
+-- =====================================================
+-- Daily Metrics (Comprehensive Aggregation)
+-- =====================================================
 CREATE TABLE IF NOT EXISTS daily_metrics (
   user_id  TEXT NOT NULL,
   date     DATE NOT NULL,
@@ -333,6 +677,149 @@ CREATE INDEX IF NOT EXISTS idx_daily_metrics_date ON daily_metrics(date DESC);
 -- ============================================================
 -- Daily Metrics Aggregation Function (Single User, Single Day)
 -- ============================================================
+
+-- =====================================================
+-- AGGREGATION FUNCTIONS
+-- Populate daily summary tables from detailed tracking tables
+-- =====================================================
+
+-- Function to update daily_focus_summary from focus_streaks
+CREATE OR REPLACE FUNCTION update_daily_focus_summary(p_user_id TEXT, p_date DATE)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO daily_focus_summary (
+    user_id, date, total_focus_minutes, max_focus_streak_min, avg_focus_streak_min
+  )
+  SELECT
+    p_user_id,
+    p_date,
+    COALESCE(SUM(duration_min), 0)::INTEGER AS total_focus_minutes,
+    COALESCE(MAX(duration_min), 0)::INTEGER AS max_focus_streak_min,
+    COALESCE(AVG(duration_min), 0)::INTEGER AS avg_focus_streak_min
+  FROM focus_streaks
+  WHERE user_id = p_user_id
+    AND start_ts >= p_date::TIMESTAMPTZ
+    AND start_ts < (p_date + INTERVAL '1 day')::TIMESTAMPTZ
+    AND type = 'global'
+  ON CONFLICT (user_id, date)
+  DO UPDATE SET
+    total_focus_minutes = EXCLUDED.total_focus_minutes,
+    max_focus_streak_min = EXCLUDED.max_focus_streak_min,
+    avg_focus_streak_min = EXCLUDED.avg_focus_streak_min,
+    created_at = CURRENT_TIMESTAMP;
+END;
+$$;
+
+-- Function to update daily_idle_summary from idle_sessions
+CREATE OR REPLACE FUNCTION update_daily_idle_summary(p_user_id TEXT, p_date DATE)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO daily_idle_summary (
+    user_id, date, idle_minutes, idle_sessions, avg_idle_session_min, longest_idle_session_min
+  )
+  SELECT
+    p_user_id,
+    p_date,
+    COALESCE(SUM(duration_min), 0)::NUMERIC(6,1) AS idle_minutes,
+    COUNT(*)::INTEGER AS idle_sessions,
+    COALESCE(AVG(duration_min), 0)::NUMERIC(5,1) AS avg_idle_session_min,
+    COALESCE(MAX(duration_min), 0)::NUMERIC(5,1) AS longest_idle_session_min
+  FROM idle_sessions
+  WHERE user_id = p_user_id
+    AND start_ts >= p_date::TIMESTAMPTZ
+    AND start_ts < (p_date + INTERVAL '1 day')::TIMESTAMPTZ
+  ON CONFLICT (user_id, date)
+  DO UPDATE SET
+    idle_minutes = EXCLUDED.idle_minutes,
+    idle_sessions = EXCLUDED.idle_sessions,
+    avg_idle_session_min = EXCLUDED.avg_idle_session_min,
+    longest_idle_session_min = EXCLUDED.longest_idle_session_min,
+    created_at = CURRENT_TIMESTAMP;
+END;
+$$;
+
+-- Function to update daily_error_summary from error_fix_sessions
+CREATE OR REPLACE FUNCTION update_daily_error_summary(p_user_id TEXT, p_date DATE)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO daily_error_summary (
+    user_id, date, error_count, avg_fix_time_min, total_fix_time_min, long_fix_count
+  )
+  SELECT
+    p_user_id,
+    p_date,
+    COUNT(*)::INTEGER AS error_count,
+    COALESCE(AVG(duration_sec / 60.0), 0)::NUMERIC(5,1) AS avg_fix_time_min,
+    COALESCE(SUM(duration_sec / 60.0), 0)::NUMERIC(6,1) AS total_fix_time_min,
+    SUM(CASE WHEN duration_sec > 600 THEN 1 ELSE 0 END)::INTEGER AS long_fix_count
+  FROM error_fix_sessions
+  WHERE user_id = p_user_id
+    AND end_ts >= p_date::TIMESTAMPTZ
+    AND end_ts < (p_date + INTERVAL '1 day')::TIMESTAMPTZ
+    AND severity = 'error'
+  ON CONFLICT (user_id, date)
+  DO UPDATE SET
+    error_count = EXCLUDED.error_count,
+    avg_fix_time_min = EXCLUDED.avg_fix_time_min,
+    total_fix_time_min = EXCLUDED.total_fix_time_min,
+    long_fix_count = EXCLUDED.long_fix_count,
+    created_at = CURRENT_TIMESTAMP;
+END;
+$$;
+
+-- Function to update daily_time_focus_summary from focus_streaks
+CREATE OR REPLACE FUNCTION update_daily_time_focus_summary(p_user_id TEXT, p_date DATE)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  INSERT INTO daily_time_focus_summary (
+    user_id, date, day_focus_minutes, night_focus_minutes, day_sessions, night_sessions
+  )
+  SELECT
+    p_user_id,
+    p_date,
+    COALESCE(SUM(CASE 
+      WHEN EXTRACT(HOUR FROM start_ts) >= 6 AND EXTRACT(HOUR FROM start_ts) < 18 
+      THEN duration_min ELSE 0 END), 0)::INTEGER AS day_focus_minutes,
+    COALESCE(SUM(CASE 
+      WHEN EXTRACT(HOUR FROM start_ts) < 6 OR EXTRACT(HOUR FROM start_ts) >= 18 
+      THEN duration_min ELSE 0 END), 0)::INTEGER AS night_focus_minutes,
+    COUNT(CASE 
+      WHEN EXTRACT(HOUR FROM start_ts) >= 6 AND EXTRACT(HOUR FROM start_ts) < 18 
+      THEN 1 END)::INTEGER AS day_sessions,
+    COUNT(CASE 
+      WHEN EXTRACT(HOUR FROM start_ts) < 6 OR EXTRACT(HOUR FROM start_ts) >= 18 
+      THEN 1 END)::INTEGER AS night_sessions
+  FROM focus_streaks
+  WHERE user_id = p_user_id
+    AND start_ts >= p_date::TIMESTAMPTZ
+    AND start_ts < (p_date + INTERVAL '1 day')::TIMESTAMPTZ
+    AND type = 'global'
+  ON CONFLICT (user_id, date)
+  DO UPDATE SET
+    day_focus_minutes = EXCLUDED.day_focus_minutes,
+    night_focus_minutes = EXCLUDED.night_focus_minutes,
+    day_sessions = EXCLUDED.day_sessions,
+    night_sessions = EXCLUDED.night_sessions,
+    created_at = CURRENT_TIMESTAMP;
+END;
+$$;
+
+-- Master function to update all daily summaries
+CREATE OR REPLACE FUNCTION update_all_daily_summaries(p_user_id TEXT, p_date DATE)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  PERFORM update_daily_focus_summary(p_user_id, p_date);
+  PERFORM update_daily_idle_summary(p_user_id, p_date);
+  PERFORM update_daily_error_summary(p_user_id, p_date);
+  PERFORM update_daily_time_focus_summary(p_user_id, p_date);
+END;
+$$;
+
+
+-- =====================================================
+-- DAILY METRICS AGGREGATION (Comprehensive)
+-- =====================================================
+
 CREATE OR REPLACE FUNCTION make_daily_metrics(p_user_id TEXT, p_day DATE)
 RETURNS VOID LANGUAGE plpgsql AS $$
 BEGIN
@@ -554,6 +1041,7 @@ $$;
 -- ============================================================
 -- Daily Metrics Aggregation Function (All Users, Single Day)
 -- ============================================================
+-- Aggregate for all users on a specific day
 CREATE OR REPLACE FUNCTION make_daily_metrics_all(p_day DATE)
 RETURNS VOID LANGUAGE plpgsql AS $$
 DECLARE r RECORD;
@@ -665,3 +1153,60 @@ CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_active ON gemini_risk_results
 CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_session ON gemini_risk_results(session_id);
 CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_error_session ON gemini_risk_results(error_session_id);
 
+
+-- =====================================================
+-- MANUAL AGGREGATION (Call from backend API)
+-- =====================================================
+
+-- Function to aggregate ALL users' daily summaries for a specific day
+-- This updates ONLY the 4 daily summary tables (NOT daily_metrics)
+-- Call this from your backend API or manually
+CREATE OR REPLACE FUNCTION aggregate_all_daily_summaries(p_date DATE DEFAULT NULL)
+RETURNS TABLE(users_processed INT, target_date DATE) 
+LANGUAGE plpgsql AS $$
+DECLARE
+  r RECORD;
+  process_date DATE;
+  user_count INT := 0;
+BEGIN
+  -- Default to previous day if no date provided
+  process_date := COALESCE(p_date, CURRENT_DATE - INTERVAL '1 day');
+  
+  -- Get all unique users from detailed tracking tables
+  FOR r IN
+    SELECT DISTINCT user_id FROM (
+      SELECT user_id FROM focus_streaks
+        WHERE start_ts >= process_date::TIMESTAMPTZ 
+        AND start_ts < (process_date + INTERVAL '1 day')::TIMESTAMPTZ
+      UNION 
+      SELECT user_id FROM idle_sessions
+        WHERE start_ts >= process_date::TIMESTAMPTZ 
+        AND start_ts < (process_date + INTERVAL '1 day')::TIMESTAMPTZ
+      UNION 
+      SELECT user_id FROM error_fix_sessions
+        WHERE end_ts >= process_date::TIMESTAMPTZ 
+        AND end_ts < (process_date + INTERVAL '1 day')::TIMESTAMPTZ
+    ) u
+  LOOP
+    -- Update all 4 daily summary tables for this user
+    PERFORM update_all_daily_summaries(r.user_id, process_date);
+    user_count := user_count + 1;
+  END LOOP;
+  
+  RETURN QUERY SELECT user_count, process_date;
+END;
+$$;
+
+-- =====================================================
+-- USAGE EXAMPLES
+-- =====================================================
+-- Your backend can call these functions via API endpoints:
+--
+-- Aggregate yesterday's data for all users:
+--   SELECT * FROM aggregate_all_daily_summaries();
+--
+-- Aggregate specific date:
+--   SELECT * FROM aggregate_all_daily_summaries('2026-01-07');
+--
+-- Aggregate specific user and date:
+--   SELECT update_all_daily_summaries('testUser', '2026-01-07');

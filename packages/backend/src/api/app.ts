@@ -19,6 +19,15 @@ import authRoutes from '../features/auth/auth.routes.js';
 import errorSessionsRoutes from '../features/Code-Risk/errorSessions/errorSessions.routes.js';
 import geminiRiskResultsRoutes from '../features/Code-Risk/geminiRiskResults/geminiRiskResults.routes.js';
 import { errorHandler } from '../middlewares/error.js';
+//forecasting routes
+import forecastingRoutes from '../features/forecasting/forecasting.routes.js';
+import forecastInsightsRoutes from '../features/forecasting/forecastInsights.routes.js';
+import planningRoutes from '../features/forecasting/planning.routes.js';
+import explainRoutes from '../features/forecasting/explain.routes.js';
+
+
+
+
 
 const app: Application = express();
 

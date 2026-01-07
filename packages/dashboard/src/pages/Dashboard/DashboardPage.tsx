@@ -10,6 +10,7 @@ import {
 import { Pie, Doughnut } from 'react-chartjs-2';
 import { KpiCard, ChartCard, EmptyState, ChartSkeleton } from '../../components/charts/ChartComponents';
 
+
 // Register chart.js components once
 ChartJS.register(ArcElement, Tooltip, Legend, Title);
 
@@ -76,6 +77,7 @@ export default function DashboardPage() {
         <KpiCard title="Total Sold" value={totals.totalSold} />
         <KpiCard title="In Stock" value={totals.totalStockLeft} />
       </div>
+
 
       {/* Charts */}
       <ChartCard
