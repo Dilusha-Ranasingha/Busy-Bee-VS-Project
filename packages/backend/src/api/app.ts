@@ -16,6 +16,8 @@ import idleSessionsRoutes from '../features/Metrics-Tracking/idleSessions/idleSe
 import dailyMetricsRoutes from '../features/Metrics-Tracking/dailyMetrics/dailyMetrics.routes.js';
 import productivityScoreRoutes from '../features/Metrics-Tracking/productivityScore/productivityScore.routes.js';
 import authRoutes from '../features/auth/auth.routes.js';
+import errorSessionsRoutes from '../features/Code-Risk/errorSessions/errorSessions.routes.js';
+import geminiRiskResultsRoutes from '../features/Code-Risk/geminiRiskResults/geminiRiskResults.routes.js';
 import { errorHandler } from '../middlewares/error.js';
 
 const app: Application = express();
@@ -39,6 +41,8 @@ app.use('/api/idle-sessions', idleSessionsRoutes);
 app.use('/api/daily-metrics', dailyMetricsRoutes);
 app.use('/api/productivity-score', productivityScoreRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/code-risk/error-sessions', errorSessionsRoutes);
+app.use('/api/code-risk/risk-results', geminiRiskResultsRoutes);
 
 app.use(errorHandler);
 

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle, GitCommit, Coffee } from 'lucide-react';
+import { LayoutDashboard, PlusCircle, Package, ArrowLeftRight, Flame, PenTool, Save, AlertCircle, Clock, PlayCircle, GitCommit, Coffee, ShieldAlert } from 'lucide-react';
 import { DashboardPage } from './pages/Dashboard';
 import { AddProductPage } from './pages/AddProduct';
 import { ProductListPage } from './pages/ProductList';
@@ -12,15 +12,17 @@ import { ErrorFixTimePage } from './pages/Metrics-Tracking/ErrorFixTime';
 import { TaskRunsPage } from './pages/Metrics-Tracking/TaskRuns';
 import { CommitEditSessionsPage } from './pages/Metrics-Tracking/CommitEditSessions';
 import { IdleSessionsPage } from './pages/Metrics-Tracking/IdleSessions';
+import { CodeRiskPage } from './pages/Code-Risk';
 import { SideNav } from './components/Layout';
 import { GitHubAuthButton } from './components/Auth/GitHubAuth';
 
-type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits' | 'idle';
+type Tab = 'dashboard' | 'add' | 'list' | 'fileswitch' | 'focusstreak' | 'editsessions' | 'saveedit' | 'diagnostics' | 'errorfix' | 'taskruns' | 'commitedits' | 'idle' | 'coderisk';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'add', label: 'Add Product', icon: PlusCircle },
   { id: 'list', label: 'Product List', icon: Package },
+  { id: 'coderisk', label: 'Code Risk', icon: ShieldAlert },
   { id: 'fileswitch', label: 'File Switch', icon: ArrowLeftRight },
   { id: 'focusstreak', label: 'Focus Streaks', icon: Flame },
   { id: 'editsessions', label: 'Edits/Min', icon: PenTool },
@@ -62,6 +64,7 @@ export default function App() {
             {tab === 'dashboard' && <DashboardPage />}
             {tab === 'add' && <AddProductPage />}
             {tab === 'list' && <ProductListPage />}
+            {tab === 'coderisk' && <CodeRiskPage />}
             {tab === 'fileswitch' && <FileSwitchRatePage />}
             {tab === 'focusstreak' && <FocusStreakPage />}
             {tab === 'editsessions' && <EditSessionsPage />}
