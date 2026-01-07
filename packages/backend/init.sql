@@ -310,6 +310,287 @@ CREATE INDEX IF NOT EXISTS idx_idle_sessions_duration ON idle_sessions(user_id, 
 CREATE INDEX IF NOT EXISTS idx_idle_sessions_shortest ON idle_sessions(user_id, duration_min ASC);
 
 -- ============================================================
+-- 10) Daily Metrics (Aggregated Summary per User per Day)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS daily_metrics (
+  user_id  TEXT NOT NULL,
+  date     DATE NOT NULL,
+  file_switch           JSONB NOT NULL,
+  focus_streak          JSONB NOT NULL,
+  edits_per_min         JSONB NOT NULL,
+  saves_to_edit_ratio   JSONB NOT NULL,
+  diagnostics_per_kloc  JSONB NOT NULL,
+  error_fix             JSONB NOT NULL,
+  tasks                 JSONB NOT NULL,
+  commits               JSONB NOT NULL,
+  idle                  JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_metrics_date ON daily_metrics(date DESC);
+
+-- ============================================================
+-- Daily Metrics Aggregation Function (Single User, Single Day)
+-- ============================================================
+CREATE OR REPLACE FUNCTION make_daily_metrics(p_user_id TEXT, p_day DATE)
+RETURNS VOID LANGUAGE plpgsql AS $$
+BEGIN
+  WITH
+  bounds AS (
+    SELECT p_day::date AS day, (p_day + INTERVAL '1 day')::date AS day_next
+  ),
+
+  -- 1) File switch
+  file_switch AS (
+    SELECT
+      AVG(rate_per_min)::numeric(10,4) AS file_switch_rate_avg,
+      PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY rate_per_min)::numeric(10,4) AS file_switch_rate_p95,
+      SUM(activation_count) AS file_switch_count_total,
+      COUNT(*) AS file_switch_sessions
+    FROM file_switch_windows f, bounds b
+    WHERE f.user_id = p_user_id
+      AND f.window_start >= b.day AND f.window_start < b.day_next
+  ),
+
+  -- 2) Focus streaks
+  focus AS (
+    SELECT
+      MAX(CASE WHEN type='global'   THEN duration_min END)::numeric AS global_focus_streak_max_min,
+      MAX(CASE WHEN type='per_file' THEN duration_min END)::numeric AS per_file_focus_streak_max_min
+    FROM focus_streaks s, bounds b
+    WHERE s.user_id = p_user_id
+      AND s.start_ts >= b.day AND s.start_ts < b.day_next
+  ),
+
+  -- 3) Edits per minute
+  edits AS (
+    SELECT
+      AVG(edits_per_min)::numeric(10,2) AS edits_per_min_avg,
+      PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY edits_per_min)::numeric(10,2) AS edits_per_min_p95,
+      AVG(typing_burstiness_index)::numeric(10,3) AS typing_burstiness_index_avg,
+      COALESCE(SUM(paste_events),0) AS paste_events_total,
+      COALESCE(SUM(duration_min),0)::numeric(10,2) AS active_time_min_from_edits
+    FROM sessions_edits e, bounds b
+    WHERE e.user_id = p_user_id
+      AND e.start_ts >= b.day AND e.start_ts < b.day_next
+  ),
+
+  -- 4) Saves to edit ratio
+  saves AS (
+    SELECT
+      AVG(save_to_edit_ratio_manual)::numeric(10,4) AS save_to_edit_ratio_manual_avg,
+      AVG(effective_save_to_edit_ratio)::numeric(10,4) AS effective_save_to_edit_ratio_avg,
+      PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY median_secs_between_saves)::numeric(10,2) AS median_secs_between_saves,
+      COALESCE(SUM(checkpoint_autosave_count),0) AS checkpoint_autosave_count_total
+    FROM save_edit_sessions s, bounds b
+    WHERE s.user_id = p_user_id
+      AND s.start_ts >= b.day AND s.start_ts < b.day_next
+  ),
+
+  -- 5) Diagnostics per KLOC
+  diag AS (
+    SELECT
+      AVG(peak_density_per_kloc)::numeric(10,2) AS diagnostics_density_avg_per_kloc,
+      MAX(peak_density_per_kloc)::numeric(10,2) AS diagnostics_hotspot_max_per_kloc
+    FROM diagnostic_density_sessions d, bounds b
+    WHERE d.user_id = p_user_id
+      AND d.start_ts >= b.day AND d.start_ts < b.day_next
+  ),
+
+  -- 6) Error fix (count by when it finished)
+  fix AS (
+    SELECT
+      COUNT(*) AS fixes_count,
+      (PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY duration_sec)/60.0)::numeric(10,2) AS median_active_fix_time_min,
+      (MIN(duration_sec)/60.0)::numeric(10,2) AS min_active_fix_time_min
+    FROM error_fix_sessions e, bounds b
+    WHERE e.user_id = p_user_id
+      AND e.end_ts >= b.day AND e.end_ts < b.day_next
+  ),
+
+  -- 7) Task runs
+  tasks AS (
+    SELECT
+      SUM(CASE WHEN kind='test'  AND result IN ('pass','fail') THEN 1 ELSE 0 END) AS test_runs,
+      SUM(CASE WHEN kind='build' AND result IN ('pass','fail') THEN 1 ELSE 0 END) AS build_runs,
+      (
+        SUM(CASE WHEN result='pass' THEN 1 ELSE 0 END)::float
+        / NULLIF(SUM(CASE WHEN result IN ('pass','fail') THEN 1 ELSE 0 END),0)
+      ) AS overall_pass_rate,
+      AVG(CASE WHEN kind='test' AND result <> 'cancelled' THEN duration_sec END) AS avg_test_duration_sec
+    FROM task_runs t, bounds b
+    WHERE t.user_id = p_user_id
+      AND t.start_ts >= b.day AND t.start_ts < b.day_next
+  ),
+
+  -- 8) Commit cadence (plus best commits in any hour)
+  commits_base AS (
+    SELECT c.*, 
+           EXTRACT(EPOCH FROM (c.end_ts - LAG(c.end_ts) OVER (ORDER BY c.end_ts)))/60.0 AS gap_min
+    FROM commit_edit_sessions c, bounds b
+    WHERE c.user_id = p_user_id
+      AND c.end_ts >= b.day AND c.end_ts < b.day_next
+      AND c.aborted = FALSE
+  ),
+  commits AS (
+    SELECT
+      COUNT(*) AS commits_total,
+      (PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY gap_min))::numeric(10,2) AS median_mins_between_commits,
+      AVG(edits_per_commit)::numeric(10,2) AS avg_edits_per_commit
+    FROM commits_base
+  ),
+  best_hour AS (
+    SELECT COALESCE(MAX(cnt),0) AS best_commits_in_any_hour
+    FROM (
+      SELECT COUNT(*) OVER (
+        ORDER BY end_ts
+        RANGE BETWEEN INTERVAL '60 minutes' PRECEDING AND CURRENT ROW
+      ) AS cnt
+      FROM commits_base
+    ) w
+  ),
+
+  -- 9) Idle
+  idle AS (
+    SELECT
+      COALESCE(SUM(duration_min),0)::numeric(10,2) AS idle_time_min_total,
+      COUNT(*) AS idle_sessions_count
+    FROM idle_sessions i, bounds b
+    WHERE i.user_id = p_user_id
+      AND i.start_ts >= b.day AND i.start_ts < b.day_next
+  )
+
+  INSERT INTO daily_metrics (
+    user_id, date,
+    file_switch, focus_streak, edits_per_min, saves_to_edit_ratio,
+    diagnostics_per_kloc, error_fix, tasks, commits, idle
+  )
+  VALUES (
+    p_user_id, p_day,
+
+    -- file_switch
+    JSONB_BUILD_OBJECT(
+      'file_switch_rate_avg',      (SELECT file_switch_rate_avg      FROM file_switch),
+      'file_switch_rate_p95',      (SELECT file_switch_rate_p95      FROM file_switch),
+      'file_switch_count_total',   (SELECT file_switch_count_total   FROM file_switch),
+      'file_switch_sessions',      (SELECT file_switch_sessions      FROM file_switch)
+    ),
+
+    -- focus_streak
+    JSONB_BUILD_OBJECT(
+      'global_focus_streak_max_min',  (SELECT global_focus_streak_max_min   FROM focus),
+      'per_file_focus_streak_max_min',(SELECT per_file_focus_streak_max_min FROM focus)
+    ),
+
+    -- edits_per_min
+    JSONB_BUILD_OBJECT(
+      'edits_per_min_avg',           (SELECT edits_per_min_avg            FROM edits),
+      'edits_per_min_p95',           (SELECT edits_per_min_p95            FROM edits),
+      'typing_burstiness_index_avg', (SELECT typing_burstiness_index_avg  FROM edits),
+      'paste_events_total',          (SELECT paste_events_total           FROM edits),
+      'active_time_min_from_edits',  (SELECT active_time_min_from_edits   FROM edits)
+    ),
+
+    -- saves_to_edit_ratio
+    JSONB_BUILD_OBJECT(
+      'save_to_edit_ratio_manual_avg',    (SELECT save_to_edit_ratio_manual_avg   FROM saves),
+      'effective_save_to_edit_ratio_avg', (SELECT effective_save_to_edit_ratio_avg FROM saves),
+      'median_secs_between_saves',        (SELECT median_secs_between_saves        FROM saves),
+      'checkpoint_autosave_count_total',  (SELECT checkpoint_autosave_count_total  FROM saves)
+    ),
+
+    -- diagnostics_per_kloc
+    JSONB_BUILD_OBJECT(
+      'diagnostics_density_avg_per_kloc', (SELECT diagnostics_density_avg_per_kloc FROM diag),
+      'diagnostics_hotspot_max_per_kloc', (SELECT diagnostics_hotspot_max_per_kloc FROM diag)
+    ),
+
+    -- error_fix
+    JSONB_BUILD_OBJECT(
+      'fixes_count',                    (SELECT fixes_count                    FROM fix),
+      'median_active_fix_time_min',     (SELECT median_active_fix_time_min     FROM fix),
+      'min_active_fix_time_min',        (SELECT min_active_fix_time_min        FROM fix)
+    ),
+
+    -- tasks
+    JSONB_BUILD_OBJECT(
+      'test_runs',                      (SELECT test_runs                      FROM tasks),
+      'build_runs',                     (SELECT build_runs                     FROM tasks),
+      'overall_pass_rate',              (SELECT overall_pass_rate              FROM tasks),
+      'avg_test_duration_sec',          (SELECT avg_test_duration_sec          FROM tasks)
+    ),
+
+    -- commits
+    JSONB_BUILD_OBJECT(
+      'commits_total',                  (SELECT commits_total                  FROM commits),
+      'median_mins_between_commits',    (SELECT median_mins_between_commits    FROM commits),
+      'best_commits_in_any_hour',       (SELECT best_commits_in_any_hour       FROM best_hour),
+      'avg_edits_per_commit',           (SELECT avg_edits_per_commit           FROM commits)
+    ),
+
+    -- idle
+    JSONB_BUILD_OBJECT(
+      'idle_time_min_total',            (SELECT idle_time_min_total            FROM idle),
+      'idle_sessions_count',            (SELECT idle_sessions_count            FROM idle)
+    )
+  )
+  ON CONFLICT (user_id, date)
+  DO UPDATE SET
+    file_switch          = EXCLUDED.file_switch,
+    focus_streak         = EXCLUDED.focus_streak,
+    edits_per_min        = EXCLUDED.edits_per_min,
+    saves_to_edit_ratio  = EXCLUDED.saves_to_edit_ratio,
+    diagnostics_per_kloc = EXCLUDED.diagnostics_per_kloc,
+    error_fix            = EXCLUDED.error_fix,
+    tasks                = EXCLUDED.tasks,
+    commits              = EXCLUDED.commits,
+    idle                 = EXCLUDED.idle,
+    created_at           = NOW();
+
+END;
+$$;
+
+-- ============================================================
+-- Daily Metrics Aggregation Function (All Users, Single Day)
+-- ============================================================
+CREATE OR REPLACE FUNCTION make_daily_metrics_all(p_day DATE)
+RETURNS VOID LANGUAGE plpgsql AS $$
+DECLARE r RECORD;
+BEGIN
+  FOR r IN
+    SELECT DISTINCT user_id FROM (
+      SELECT user_id FROM sessions_edits
+      UNION SELECT user_id FROM save_edit_sessions
+      UNION SELECT user_id FROM file_switch_windows
+      UNION SELECT user_id FROM diagnostic_density_sessions
+      UNION SELECT user_id FROM error_fix_sessions
+      UNION SELECT user_id FROM task_runs
+      UNION SELECT user_id FROM commit_edit_sessions
+      UNION SELECT user_id FROM idle_sessions
+      UNION SELECT user_id FROM focus_streaks
+    ) u
+  LOOP
+    PERFORM make_daily_metrics(r.user_id, p_day);
+  END LOOP;
+END;
+$$;
+
+-- ============================================================
+-- 11) Productivity Score (AI-Generated Daily Assessment)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS productivity_score (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0 AND score <= 100),
+  recommendations JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_productivity_score_user ON productivity_score(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_productivity_score_score ON productivity_score(user_id, score DESC);
 -- 10) Error Sessions (Code Risk - Data sent to Gemini)
 -- ============================================================
 CREATE TABLE IF NOT EXISTS error_sessions (
