@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { getPool } from '../config/db';
+import { runDailyScoringForAllUsers } from './dailyScoring';
 
 export function setupDailyMetricsCron() {
   // Run at 23:59 Asia/Colombo time every day
@@ -16,9 +17,17 @@ export function setupDailyMetricsCron() {
 
         console.log(`[DailyMetrics] Running daily aggregation for ${today}...`);
 
+        // Step 1: Aggregate metrics
         await pool.query('SELECT make_daily_metrics_all($1)', [today]);
 
         console.log(`[DailyMetrics] Daily aggregation completed for ${today}`);
+
+        // Step 2: Generate AI productivity scores
+        console.log(`[DailyMetrics] Starting productivity scoring for ${today}...`);
+        
+        await runDailyScoringForAllUsers(today);
+
+        console.log(`[DailyMetrics] ✅ All daily processing completed for ${today}`);
       } catch (error) {
         console.error('[DailyMetrics] Error running daily aggregation:', error);
       }
@@ -28,5 +37,5 @@ export function setupDailyMetricsCron() {
     }
   );
 
-  console.log('[DailyMetrics] Cron job scheduled: Daily aggregation at 23:59 Asia/Colombo');
+  console.log('[DailyMetrics] Cron job scheduled: Daily aggregation + AI scoring at 23:59 Asia/Colombo');
 }

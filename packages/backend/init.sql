@@ -576,3 +576,19 @@ BEGIN
 END;
 $$;
 
+-- ============================================================
+-- 11) Productivity Score (AI-Generated Daily Assessment)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS productivity_score (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  date DATE NOT NULL,
+  score INTEGER NOT NULL CHECK (score >= 0 AND score <= 100),
+  recommendations JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE (user_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_productivity_score_user ON productivity_score(user_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_productivity_score_score ON productivity_score(user_id, score DESC);
+

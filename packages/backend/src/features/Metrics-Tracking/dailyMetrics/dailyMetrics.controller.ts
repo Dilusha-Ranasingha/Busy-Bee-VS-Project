@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as dailyMetricsService from './dailyMetrics.service';
+import { runDailyScoringForAllUsers, runDailyScoringForUser } from '../../../jobs/dailyScoring';
 
 export const getDailyMetrics = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -58,7 +59,7 @@ export const getDailyMetricsRange = async (req: Request, res: Response): Promise
 
 export const triggerAggregation = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { date, userId } = req.body;
+    const { date, userId, includeScoring = true } = req.body;
 
     if (!date || typeof date !== 'string') {
       res.status(400).json({ error: 'date is required (YYYY-MM-DD)' });
@@ -68,11 +69,25 @@ export const triggerAggregation = async (req: Request, res: Response): Promise<v
     if (userId && typeof userId === 'string') {
       // Trigger for specific user
       await dailyMetricsService.triggerUserDailyAggregation(userId, date);
-      res.json({ message: `Aggregation triggered for user ${userId} on ${date}` });
+      
+      if (includeScoring) {
+        await runDailyScoringForUser(userId, date);
+      }
+      
+      res.json({ 
+        message: `Aggregation ${includeScoring ? '+ scoring ' : ''}triggered for user ${userId} on ${date}` 
+      });
     } else {
       // Trigger for all users
       await dailyMetricsService.triggerDailyAggregation(date);
-      res.json({ message: `Aggregation triggered for all users on ${date}` });
+      
+      if (includeScoring) {
+        await runDailyScoringForAllUsers(date);
+      }
+      
+      res.json({ 
+        message: `Aggregation ${includeScoring ? '+ scoring ' : ''}triggered for all users on ${date}` 
+      });
     }
   } catch (error) {
     console.error('Error triggering aggregation:', error);
