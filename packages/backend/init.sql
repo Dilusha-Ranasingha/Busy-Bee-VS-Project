@@ -591,4 +591,77 @@ CREATE TABLE IF NOT EXISTS productivity_score (
 
 CREATE INDEX IF NOT EXISTS idx_productivity_score_user ON productivity_score(user_id, date DESC);
 CREATE INDEX IF NOT EXISTS idx_productivity_score_score ON productivity_score(user_id, score DESC);
+-- 10) Error Sessions (Code Risk - Data sent to Gemini)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS error_sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  session_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  workspace_id TEXT,
+  
+  -- File identification
+  file_uri TEXT NOT NULL,
+  file_hash TEXT,
+  language TEXT,
+  
+  -- Metrics
+  loc INT NOT NULL CHECK (loc >= 0),
+  error_count_session INT NOT NULL CHECK (error_count_session > 0),
+  insertions_15m INT NOT NULL DEFAULT 0,
+  deletions_15m INT NOT NULL DEFAULT 0,
+  
+  -- Error details
+  all_error_messages JSONB NOT NULL DEFAULT '[]'::jsonb,
+  
+  -- Timing
+  session_start_time TIMESTAMPTZ NOT NULL,
+  session_end_time TIMESTAMPTZ NOT NULL,
+  
+  -- Status
+  sent_to_gemini BOOLEAN DEFAULT FALSE,
+  gemini_requested_at TIMESTAMPTZ,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for error session queries
+CREATE INDEX IF NOT EXISTS idx_error_sessions_user ON error_sessions(user_id, session_start_time DESC);
+CREATE INDEX IF NOT EXISTS idx_error_sessions_file ON error_sessions(file_uri, session_start_time DESC);
+CREATE INDEX IF NOT EXISTS idx_error_sessions_pending ON error_sessions(sent_to_gemini, created_at) WHERE sent_to_gemini = FALSE;
+CREATE INDEX IF NOT EXISTS idx_error_sessions_session_id ON error_sessions(session_id);
+
+-- ============================================================
+-- 11) Gemini Risk Results (AI Analysis Results for Display)
+-- ============================================================
+CREATE TABLE IF NOT EXISTS gemini_risk_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  
+  session_id TEXT NOT NULL,
+  error_session_id UUID NOT NULL REFERENCES error_sessions(id) ON DELETE CASCADE,
+  
+  user_id TEXT NOT NULL,
+  file_uri TEXT NOT NULL,
+  
+  -- Risk assessment
+  risk_level TEXT NOT NULL CHECK (risk_level IN ('Low', 'Medium', 'High')),
+  color_code TEXT NOT NULL CHECK (color_code IN ('Green', 'Yellow', 'Red')),
+  
+  -- Explanations
+  risk_explanation TEXT NOT NULL,
+  error_explanation TEXT NOT NULL,
+  fix_steps JSONB NOT NULL DEFAULT '[]'::jsonb,
+  
+  -- Metadata
+  is_active BOOLEAN DEFAULT TRUE,
+  
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for gemini risk results queries
+CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_user ON gemini_risk_results(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_file ON gemini_risk_results(file_uri, is_active, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_active ON gemini_risk_results(user_id, is_active) WHERE is_active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_session ON gemini_risk_results(session_id);
+CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_error_session ON gemini_risk_results(error_session_id);
 
