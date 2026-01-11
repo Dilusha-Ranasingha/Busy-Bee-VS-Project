@@ -91,80 +91,687 @@ Monorepo layout:
 
 ## 3. Main Features
 
-### 3.1 Code Risk
+### 3.1 Metrics Tracking – AI Productivity Coach
 
-**Purpose**: Provide a "Code Risk" view that analyzes code or changes and surfaces risk-related insights to the dashboard and/or extension.
+This feature is the **multi-dimensional behavioral metrics engine** behind Busy Bee – an AI Productivity Coach for VS Code.
 
-**Implementation hints from the repo structure** (not fully detailed in the attached docs but visible in the workspace):
-- Backend: `packages/backend/src/features/Code-Risk/` (feature-based backend module for Code Risk APIs and data).
-- Dashboard: `packages/dashboard/src/hooks/useCodeRisk.ts`, `src/pages/Code-Risk/`, `src/services/Code-Risk/`, `src/types/Code-Risk/`.
-- Extension: Code Risk data can be surfaced through the embedded dashboard webview.
+**Target users:** Undergraduate IT students & early-career developers.
 
-Typical responsibilities:
-- Expose HTTP endpoints under a Code Risk feature (e.g., scoring endpoints, history per repo/workspace).
-- Provide TypeScript types and hooks for consuming risk scores on the dashboard.
-- Potentially integrate with AI analysis (`@google/genai` is present in backend dependencies) to compute risk metrics.
+**Goal:** Measure coding behavior *fairly* and turn it into **actionable, AI-generated productivity insights**—without ever sending source code content.
 
-> For exact scoring logic and models, refer to the Code Risk feature source files under the `Code-Risk` directories in backend and dashboard.
+#### 3.1.1 End-to-end responsibilities (A → Z)
+
+- Capture key developer signals from VS Code (edits, saves, file switching, diagnostics, tasks, commits, etc.).
+- Build sessions & events (session-based, event-based, or hourly depending on the metric).
+- Compute well-defined, noise-resistant metrics (focus streaks, edits/min, error fix time, etc.).
+- Send **only aggregated JSON** (no raw code) to the backend API.
+- Store data in PostgreSQL for analytics and dashboards.
+- Call an AI model (Gemini / GPT) with a strict JSON schema to generate:
+  - a **productivity score** per session or day,
+  - **reasons** (what helped/hurt),
+  - **top recommendations**.
+- Surface clear UI in the extension & dashboard with “best of” style cards:
+  - best streaks, best commit hour, best build/test hour, fastest error fix, etc.
+
+#### 3.1.2 Why this is novel
+
+- Goes beyond simple time tracking or LOC counting.
+- Uses **multi-dimensional behavioral metrics** tied to real developer flow (focus, typing cadence, build/test loops, error fix times, etc.).
+- Careful **session & event modeling** (e.g., autosave compression, active vs pending error timers) reduces noise.
+- **Privacy-first**: only stores aggregates and metadata; never source code.
+- **Personalized AI coaching** based on each user’s own baseline, not generic benchmarks.
+
+#### 3.1.3 System overview
+
+High-level data flow:
+
+```text
+┌─────────────────┐        HTTPS (JWT)         ┌──────────────────────┐
+│ VS Code         │ ─────────────────────────▶ │ Backend API (Node/TS)│
+│  Extension (TS) │                            │  + PostgreSQL        │
+│                 │ ◀───────────────────────── │  + AI client         │
+└─────┬───────────┘        Insights            └─────┬────────────────┘
+      │  editor/doc/debug/tasks/git events           │
+      │                                              │
+      │                Web Dashboard (React/Tailwind)│
+      │                    (students/admins)         │
+      └──────────────────────────────────────────────┘
+```
+
+Authentication is typically via GitHub OAuth → backend-issued JWT, with secrets stored via `vscode.secrets` in the extension.
+
+#### 3.1.4 Logical architecture
+
+```text
+Monorepo
+busy-bee/
+├─ packages/
+│  ├─ extension/          # VS Code extension (TypeScript)
+│  │  ├─ src/capture/     # listeners: editor, diagnostics, tasks, git
+│  │  ├─ src/compute/     # metric calculators (per metric)
+│  │  ├─ src/queue/       # retry + batching to backend
+│  │  └─ src/ui/          # panels/cards for insights
+│  │
+│  ├─ backend/            # Node + Express + Postgres
+│  │  ├─ src/features/
+│  │  │  ├─ events/       # ingest endpoints
+│  │  │  ├─ sessions/     # finalize sessions, aggregates
+│  │  │  ├─ metrics/      # query APIs, best-of queries
+│  │  │  └─ ai/           # AI scorer (Gemini/GPT), prompts, validators
+│  │  └─ src/data/        # repositories, migrations
+│  │
+│  └─ dashboard/          # React + Vite + Tailwind
+│     ├─ src/pages/       # Best-of cards, trends
+│     └─ src/components/  # charts, filters
+└─ docker/                # docker-compose for Postgres, .env.example
+```
+
+#### 3.1.5 Final metrics (agreed definitions)
+
+**Legend:**
+- Session-based: Focus Streak, Edits per Minute, Save→Edit Ratio, Error Fix Time, Read vs Write.
+- Event-based: Diagnostics Density (snapshot on change).
+- Hourly: Task Runs & Pass Rate, Commit Cadence.
+
+Each metric has a clearly defined storage model and UI “best-of” surface.
+
+##### Focus Streak (per-file & global) – session-based
+
+- **Per-file streak:** continuous activity on the same file, ignoring micro-switches ≤ 30s.
+- **Global streak:** continuous VS Code activity; broken by 10 minutes idle or editor close.
+- Stored per session; UI shows best global streak and top per-file streaks.
+
+Typical fields:
+
+```text
+focus_streak_max_min
+focus_streak_avg_min
+focus_streak_count
+global_focus_streak_max_min
+global_focus_streak_count
+global_focus_time_min
+```
+
+##### Edits per Minute (typing cadence) – session-based
+
+- Bucket 1-minute windows; count edit operations and inserted/deleted characters.
+- Session ends after 10 minutes without edits.
+- UI highlights the best session by `edits_per_min`.
+
+Fields:
+
+```text
+edits_per_min, insert_chars_per_min, delete_chars_per_min,
+add_delete_ratio, typing_burstiness_index, paste_events (optional)
+```
+
+##### Save-to-Edit Ratio & Save Reason – session-based
+
+- Track manual vs autosave separately.
+- **Autosave compression:** collapse rapid autosaves until ≥ 1 min no edits.
+- **Checkpoint autosave:** autosave after ≥ 1 min idle counts as intent-like.
+- UI shows the best session by `effective_save_to_edit_ratio`.
+
+Fields:
+
+```text
+edits_total, saves_manual, autosaves_raw, autosaves_effective,
+checkpoint_autosave_count,
+save_to_edit_ratio_manual, save_to_edit_ratio_autosave, effective_save_to_edit_ratio,
+median_secs_between_saves
+```
+
+##### Diagnostics Density – event-based
+
+- On diagnostics change (and/or save), create snapshot:
+  `density_per_kloc = (errors + warnings) / max(0.001, lineCount / 1000)`.
+- UI shows highest-density and lowest (or zero/clean) events with timestamps.
+
+##### Error Fix Time – error-fix sessions
+
+- Start session at first diagnostic; end when problem list returns to zero (debounced).
+- Track **Active/Pending/Resolved** per diagnostic and only time the active error to avoid queue bias.
+- UI surfaces fastest single fix and summary per session.
+
+##### Task Runs (build/test) & Pass Rate – hourly
+
+- Uses VS Code `tasks` API to track build/test runs.
+- Store hourly rollups with pass rates and average durations.
+- UI shows best hour by pass rate (or most runs).
+
+##### Commit Cadence – hourly
+
+- Uses VS Code Git API to detect completed commits.
+- Store hourly rollups; UI highlights hour with most commits (or configurable).
+
+##### Read vs Write Time – session-based
+
+- Rolling 5s windows:
+  - **Write**: any edit.
+  - **Read**: selection/scroll/file-switch/debug without edits.
+  - **Inactive** otherwise; session ends after 10 minutes inactive.
+- UI shows highest read-time and highest write-time sessions.
+
+#### 3.1.6 AI data contracts
+
+Only aggregates are sent to the AI scorer, e.g.:
+
+```json
+{
+  "user_id": "u123",
+  "session": { "start": "10:00", "end": "11:30", "duration_min": 90 },
+  "metrics": {
+    "focus_streak_max_min": 28,
+    "edits_per_min": 17,
+    "effective_save_to_edit_ratio": 0.036,
+    "diagnostics_density_per_kloc": 3.2,
+    "min_active_fix_time_min": 1.8,
+    "test_pass_rate": 0.75,
+    "commit_count_hour_best": 5,
+    "read_min": 32,
+    "write_min": 58
+  },
+  "baseline": {
+    "focus_streak_max_min_p50": 20,
+    "edits_per_min_p50": 12,
+    "diagnostics_density_per_kloc_p50": 5.0
+  }
+}
+```
+
+AI returns a strict JSON payload with `score`, `confidence`, `why`, `risks`, and `recommendations` that can be rendered directly in the UI.
+
+#### 3.1.7 Database sketch
+
+PostgreSQL tables include (simplified list):
+
+- `streaks`, `sessions_edits`, `save_edit_sessions`.
+- `diagnostic_density_events`, `error_fix_sessions`, `error_fixes`.
+- `task_run_hourly`, `commit_hourly`.
+
+These tables are designed for **best-of queries** and time-series analytics.
+
+#### 3.1.8 Privacy, ethics, and security
+
+- No source code ever sent; only aggregates & metadata.
+- Per-metric opt-in/out and local consent screen.
+- User control for “delete my data” and local-only mode.
+- File paths can be hashed into `file_hash` identifiers.
+- JWT stored via `vscode.secrets`; all network traffic over HTTPS.
+
+> Implementation-wise, this feature maps onto the existing trackers in `packages/extension/src/tracking`, backend metrics features, and dashboard hooks under `packages/dashboard/src/hooks`.
 
 
-### 3.2 Metrics Tracking
+### 3.2 Code Risk – Code Risk & Complexity Visual Analyzer
 
-**Purpose**: Track multiple aspects of developer activity to understand productivity and flow, then visualize them in the dashboard.
+This feature is the **Code Risk & Complexity Visual Analyzer**: an AI-powered, error-aware risk analysis component aimed at **individual developers** (students, freelancers, and solo programmers).
 
-The Metrics Tracking feature consists of three layers:
-- **Extension trackers** that observe VS Code events and periodically send metrics to the backend.
-- **Backend features** that store and aggregate metrics.
-- **Dashboard hooks/pages** that fetch and visualize the metrics.
+Its goals are to:
+- Quickly identify *risky* files.
+- Explain **why** errors are happening.
+- Provide simple, AI-guided fix suggestions.
+- Reduce time spent reading long error logs.
 
-#### 3.2.1 File Switch Tracking (documented in detail)
+Unlike traditional static analysis tools, this feature:
+- Works **in real time**, **triggered by real errors** (not continuous scanning).
+- Provides **file-level risk visualization** directly in VS Code.
 
-File Switch Tracking is the main, fully documented metric so far.
+#### 3.2.1 Problem it solves
 
-- Extension:
-  - `packages/extension/src/tracking/FileSwitchTracker.ts` tracks file activations via `vscode.window.onDidChangeActiveTextEditor`.
-  - Every file activation increments a counter; returning to the same file still counts (A → B → A = 3 activations).
-  - Windows of 5 minutes are used; every 5 minutes the extension posts a summarized window to the backend.
-  - Sessions are identified by a unique `sessionId` per VS Code instance and tagged with `workspaceTag`.
+Developers frequently struggle with:
+- Locating the actual problematic file in large projects.
+- Understanding compiler/runtime error messages.
+- Losing time during debugging sessions.
 
-- Backend:
-  - Feature folder: `packages/backend/src/features/fileSwitch/`.
-  - DB table: `file_switch_windows` (see schema below).
-  - REST endpoints:
-    - `POST /api/file-switch/windows` – creates a window record.
-    - `GET /api/file-switch/windows?sessionId=...` – lists windows for a session.
-    - `GET /api/file-switch/sessions?date=YYYY-MM-DD` – summarizes sessions by date.
+Existing tools (SonarQube, CodeScene, etc.):
+- Focus on heavy, project-wide static analysis.
+- Require manual log inspection.
+- Are often not beginner-friendly and can slow development.
 
-- Dashboard:
-  - Types: `packages/dashboard/src/types/fileSwitch.types.ts`.
-  - Services: `packages/dashboard/src/services/fileSwitch.service.ts`.
-  - Page: `packages/dashboard/src/pages/FileSwitchRate/FileSwitchRatePage.tsx`.
-  - Features:
-    - Date picker selects a day.
-    - Session list for that date.
-    - Detailed table of 5-minute windows for the selected session.
+#### 3.2.2 Solution summary
 
-#### 3.2.2 Other Metrics (extension + dashboard)
+The component introduces **event-triggered, AI-assisted risk analysis** that:
+- Activates only when errors occur.
+- Groups errors into **time-based error sessions**.
+- Analyzes risk using real developer signals (error count, recent edits, LOC, etc.).
+- Uses Gemini AI to explain risk and suggest fixes.
+- Displays results via color-coded indicators inside VS Code.
 
-From the extension and dashboard structure, the Metrics Tracking domain also includes trackers and hooks such as:
-- Commit edit sessions
-- Diagnostic density (errors/warnings density)
-- Edit sessions
-- Error fix time & error sessions
-- Focus streaks
-- Idle sessions
-- Save edit sessions
-- Task runs
+#### 3.2.3 High-level system architecture
 
-Relevant locations in the repo (names from the workspace tree):
-- Extension trackers: `packages/extension/src/tracking/CommitEditSessionsTracker.ts`, `DiagnosticDensityTracker.ts`, `EditSessionTracker.ts`, `ErrorFixTimeTracker.ts`, `ErrorSessionTracker.ts`, `FileSwitchTracker.ts`, `FocusStreakTracker.ts`, `IdleSessionsTracker.ts`, etc.
-- Dashboard hooks: `packages/dashboard/src/hooks/useCommitEditSessions.ts`, `useDiagnosticDensity.ts`, `useEditSessions.ts`, `useErrorFixTime.ts`, `useFocusStreaks.ts`, `useIdleSessions.ts`, `useSaveEditSessions.ts`, `useTaskRuns.ts`.
-- Backend: corresponding features live under `packages/backend/src/features/Metrics-Tracking/` (and similarly named feature folders).
+```text
+Developer (VS Code User)
+        |
+        v
+VS Code Extension
+  - Error detection (Diagnostics)
+  - Build failure detection
+  - Recent edit tracking
+        |
+        v
+Error Session Manager
+  - Starts session on first error
+  - Groups errors within 1 minute
+  - Ends session after inactivity
+        |
+        v
+Backend Service (Node.js + Express)
+  - Stores session data (PostgreSQL)
+  - Sends structured data to Gemini AI
+        |
+        v
+Gemini AI Risk Analyzer
+  - Determines risk level
+  - Explains error cause
+  - Suggests fix steps
+        |
+        v
+VS Code UI / Webview
+  - Color-coded risk display
+  - Explanations & guidance
+```
 
-These components follow the same general pattern as file switch tracking:
-- Extension tracker → Backend API → PostgreSQL → Dashboard view.
+#### 3.2.4 Error session logic
 
-> For exact schemas and endpoints of each metric, see the respective feature directories under `features/Metrics-Tracking` and the matching hooks/services in the dashboard.
+- **Error session** starts when the first error appears in a file.
+- Any additional errors within **1 minute** of the last error are grouped into the same session.
+- If no new error appears for >1 minute, the session closes and is sent for risk analysis.
+
+Example:
+- 08:00:00 – error in `FileA` → session starts.
+- 08:00:40 – another error → session error count = 2.
+- 08:01:40 – no new errors → session ends → data sent to Gemini → risk calculated and displayed.
+
+#### 3.2.5 Data collected per error session (per file)
+
+- `file_uri` – unique file identifier.
+- `loc` – lines of code.
+- `error_count_session` – errors during the session.
+- `insertions_15m`, `deletions_15m` – recent churn in the last 15 minutes.
+- `all_error_messages` – error texts.
+- `session_start_time`, `session_end_time`.
+
+⚠️ **No source code content is sent to AI** – only metadata and error messages.
+
+Typical payload to Gemini:
+
+```json
+{
+  "file_uri": "...",
+  "loc": 320,
+  "error_count_session": 5,
+  "insertions_15m": 42,
+  "deletions_15m": 18,
+  "all_error_messages": ["..."]
+}
+```
+
+Gemini returns, for example:
+
+```json
+{
+  "risk_level": "High",
+  "color_code": "Red",
+  "risk_explanation": "File is large and had many errors in a short time.",
+  "error_explanation": "Errors likely caused by unstable recent changes.",
+  "fix_steps": [
+    "Review recent edits",
+    "Refactor large functions",
+    "Fix errors one by one"
+  ]
+}
+```
+
+#### 3.2.6 Risk visualization
+
+Risk levels are mapped to colors and UI:
+
+- Low – 🟢 Green: stable file.
+- Medium – 🟡 Yellow: needs attention.
+- High – 🔴 Red: high-priority fix.
+
+Displayed via:
+- Code Risk panel (webview) in the sidebar.
+- Inline indicators and tooltips with explanations.
+
+#### 3.2.7 Sub-features
+
+- Error detection from VS Code Diagnostics.
+- Build failure detection.
+- Time-based error session grouping.
+- Recent edit tracking (15-minute sliding window).
+- File-level risk scoring.
+- Gemini AI integration.
+- Risk explanation and fix-step guidance.
+- Color-coded UI visualization with live updates.
+
+#### 3.2.8 Database design (backend)
+
+- `error_sessions` – stores per-session inputs sent to Gemini.
+  - `session_id`, `file_uri`, `loc`, `error_count_session`, `insertions_15m`, `deletions_15m`, `session_start_time`, `session_end_time`, `all_error_messages`.
+- `gemini_risk_results` – stores AI outputs used by the UI.
+  - `result_id`, `session_id`, `file_uri`, `risk_level`, `color_code`, `risk_explanation`, `error_explanation`, `fix_steps`, `created_at`.
+
+#### 3.2.9 Privacy, target users, and status
+
+- No source code content sent to AI; only structured metadata and error messages.
+- Data stored securely in PostgreSQL; designed for **individual** developer use.
+- Target users: undergraduates, freelancers, beginner-to-intermediate developers.
+- Implementation status:
+  - ✅ Error detection & session logic.
+  - ✅ Backend & DB schema.
+  - ✅ Gemini integration.
+  - ✅ VS Code UI panel.
+  - 🚧 UI polishing, advanced visualization, evaluation.
+
+
+### 3.3 Forecasting & Planning Engine
+
+This feature provides an **Intelligent Forecasting & Planning System** that predicts near-future productivity and helps developers create realistic, low-stress plans.
+
+Instead of only showing past analytics, it focuses on:
+- What is likely to happen **next** (1–7 days).
+- Whether a user’s planned workload is **feasible**.
+- How to plan work to avoid stress or burnout.
+
+It is designed as an independent, modular system that consumes daily summary data produced by other Busy Bee modules.
+
+#### 3.3.1 Scope & responsibilities
+
+This component **does not**:
+- Collect raw VS Code events.
+- Render past analytics dashboards.
+
+It **only**:
+- Reads daily summary tables from PostgreSQL.
+- Performs forecasting, planning, and explanation.
+- Exposes APIs for dashboards and chatbot UIs.
+
+#### 3.3.2 Architecture
+
+```text
++----------------------------+
+|   VS Code Extension UI     |
+|  (Dashboard / Chatbot)     |
++-------------+--------------+
+              |
+              v
++----------------------------+
+|     Backend API Layer      |
+|   (Node.js + Express)      |
+|                            |
+| - /forecast                |
+| - /insights                |
+| - /explain                 |
+| - /plan                    |
++-------------+--------------+
+              |
+              v
++----------------------------+
+|     ML Service Layer       |
+|   (Python + FastAPI)       |
+|                            |
+| - XGBoost model            |
+| - Feature engineering      |
+| - Explainability           |
++-------------+--------------+
+              |
+              v
++----------------------------+
+|     PostgreSQL Database    |
+|                            |
+| - daily_focus_summary      |
+| - daily_idle_summary       |
+| - daily_error_summary      |
+| - forecast_results         |
++----------------------------+
+```
+
+#### 3.3.3 Data inputs
+
+Daily aggregated tables (from Metrics Tracking and other modules):
+
+- `daily_focus_summary`:
+  - `date`, `total_focus_minutes`.
+- `daily_idle_summary`:
+  - `date`, `idle_minutes`, `day_idle_minutes`, `night_idle_minutes`.
+- `daily_error_summary`:
+  - `date`, `error_count`, `avg_error_fix_minutes`.
+
+Synthetic data can be used during development to simulate realistic patterns.
+
+#### 3.3.4 Machine learning design
+
+- Model: **XGBoost Regression**.
+- Forecast horizon: **1–7 days** (short term).
+- Feature engineering:
+  - Lagged focus values (previous days).
+  - Rolling averages (e.g., 7-day window).
+  - Idle time patterns and error-fix durations.
+  - Day-of-week effects, weekends vs weekdays.
+  - Day vs night work ratio.
+- Outputs per day:
+  - Predicted productive minutes.
+  - Lower/upper confidence bounds.
+  - Trend classification (rising/stable/falling).
+  - Risk level (low/medium/high).
+  - Confidence level (low/medium/high).
+  - Best working window (day/night).
+
+#### 3.3.5 Explainability
+
+- Uses XGBoost feature importance and local approximations.
+- Provides **human-readable explanations**, not raw ML jargon.
+- Explainability is surfaced **on demand**, via chatbot or detail panels, to avoid cognitive overload.
+
+#### 3.3.6 Planning & feasibility engine
+
+Purpose: convert forecasts into **realistic, actionable plans**.
+
+- Inputs:
+  - Time period (day or week).
+  - Target work hours.
+- Logic:
+  - Read latest forecast.
+  - Apply confidence-based safety buffers.
+  - Cap maximum hours per day.
+  - Check feasibility; if infeasible, suggest a realistic target.
+  - Generate per-day plan and recommended time windows.
+- Output:
+  - Feasible or not.
+  - Suggested target hours.
+  - Daily plan.
+  - Best work window.
+  - Chatbot-ready explanation.
+
+#### 3.3.7 Chatbot interaction design
+
+The primary user interface is a **calm, supportive chatbot** in the dashboard webview.
+
+Design principles:
+- Supportive tone, no judgment.
+- Minimal numbers unless requested.
+- Guided options instead of free text.
+- Avoid panic-inducing visuals.
+
+Examples of user intents:
+- “What’s my outlook?”
+- “Plan my day/week.”
+- “Why is confidence low?”
+- “What influenced the forecast?”
+
+#### 3.3.8 Frontend integration
+
+- Dashboard view (for supervisors/demos):
+  - Forecast chart with confidence band.
+  - Insight cards (trend, risk, confidence).
+  - Explainability panel.
+  - Planning preview.
+- Chatbot view (for real users):
+  - Conversational planning.
+  - On-demand explanations.
+  - Stress-aware interaction.
+
+#### 3.3.9 Technologies
+
+- Backend: Node.js, Express, TypeScript.
+- ML service: Python, FastAPI, XGBoost, Pandas, NumPy, Joblib.
+- Database: PostgreSQL (Dockerized).
+- Frontend: React, TypeScript, Tailwind CSS, Chart.js, VS Code Webview APIs.
+
+
+### 3.4 Intelligent TODO Tracker
+
+The **Intelligent TODO Tracker** is a workspace-aware, contextual productivity feature for VS Code that turns simple `// TODO:` comments into **intelligent, persistent, project-aware tasks**.
+
+It is a core component of Busy Bee, designed as part of a final-year BSc (Hons) IT research project with an emphasis on real-world workflows and extensibility.
+
+#### 3.4.1 Problem statement
+
+In real development:
+- Developers rely on `TODO`, `FIXME`, and similar comments.
+- These TODOs are unstructured, scattered, and often forgotten.
+- Existing IDE tools:
+  - Only list TODOs statically.
+  - Do not understand project context or lifecycle.
+
+This leads to accumulated technical debt and loss of context.
+
+#### 3.4.2 Solution overview
+
+The tracker introduces:
+- **Workspace-scoped** TODO management (project-specific, like Git repos).
+- Automatic detection and tracking of TODO-style comments.
+- Persistent lifecycle management of tasks (OPEN → RESOLVED → ARCHIVED).
+- A dedicated VS Code sidebar dashboard for visibility.
+- Backend-ready design for later AI/NLP enrichment.
+
+It operates entirely inside the developer’s normal workflow; no change to how comments are written.
+
+#### 3.4.3 System overview
+
+High-level layers:
+
+- Developer code (TODO comments).
+- VS Code Extension (local intelligence).
+- Webview dashboard (visualization).
+- Backend services (optional for AI/NLP).
+
+These layers are loosely coupled for robustness and extensibility.
+
+#### 3.4.4 Architecture
+
+```text
+VS Code Workspace
+  - Source files with TODO comments
+
+↓
+
+VS Code Extension Layer
+  - todoScanner
+  - todoParser
+  - todoStore
+  - todoLifecycle
+  - storageManager
+  - workspace watchers
+
+↓
+
+Webview Dashboard (React)
+  - TODO list visualization
+  - Filters and actions
+  - Sidebar UI
+
+↓
+
+Backend Services (Optional)
+  - NLP services
+  - Priority/urgency scoring
+  - Task summarization
+```
+
+#### 3.4.5 Core sub-features
+
+1. **Workspace-scoped TODO isolation**
+   - TODOs are bound to the active workspace.
+   - Switching projects automatically switches TODO datasets.
+
+2. **Automatic TODO detection**
+   - Scans for `TODO`, `FIXME`, `HACK`, etc.
+   - Triggered on file save, editor change, and workspace folder changes.
+   - Supports both full and incremental scans.
+
+3. **Persistent TODO lifecycle management**
+   - Each TODO moves through `OPEN → RESOLVED → ARCHIVED`.
+   - State is persisted across VS Code sessions.
+
+4. **Robust storage strategy**
+   - Primary:
+     - `<workspace>/.vscode/busy-bee-todo/todos.json`.
+   - Fallback:
+     - VS Code extension global storage, scoped by `projectId`.
+   - Atomic writes and migration-aware schema.
+
+5. **Event-driven synchronization**
+   - Uses VS Code events (saves, focus changes, workspace changes).
+   - No manual refresh required.
+
+6. **Command Palette integration**
+   - Commands such as:
+     - `Busy Bee: TODO Scan Workspace`.
+     - `Busy Bee: TODO Show Todos`.
+     - `Busy Bee: TODO Mark Resolved`.
+
+7. **Dedicated sidebar dashboard**
+   - Integrated into the VS Code Activity Bar.
+   - Shows TODO list, quick actions, and context.
+   - Built with React, Vite, Tailwind, and VS Code theme tokens.
+
+8. **Backend-ready AI/NLP integration**
+   - Optional backend can provide priority scoring, urgency detection, and summarization.
+   - Extension side remains responsive even if backend is offline.
+
+#### 3.4.6 Extension component structure
+
+Example structure under an extension feature folder:
+
+```text
+features/todo-tracker/
+  todoTracker.controller.ts   # central orchestrator
+  todoScanner.ts              # file scanning logic
+  todoParser.ts               # comment parsing
+  todoStore.ts                # in-memory + persisted state
+  todoLifecycle.ts            # task state transitions
+  todoReminderEngine.ts       # contextual reminders
+  todoFileAssociation.ts      # file relevance logic
+  todoNlpClient.ts            # backend communication
+  todo.constants.ts           # enums, constants
+  todo.errors.ts              # domain-specific errors
+  todo.telemetry.ts           # metrics and analytics hooks
+```
+
+#### 3.4.7 Usage flow
+
+1. Open a workspace.
+2. Add a comment such as `// TODO: improve error handling`.
+3. Save the file; the tracker detects and parses the TODO.
+4. Open the Busy Bee TODO Tracker view from the sidebar.
+5. View, filter, and resolve TODOs.
+6. Optionally trigger commands from the Command Palette.
+
+#### 3.4.8 Testing, research contribution, and roadmap
+
+- Tested with multiple workspaces, including restart persistence and fallback storage.
+- Research contributions:
+  - Workspace-aware task intelligence.
+  - Bridge between developer behavior and task management.
+  - Foundation for AI-driven task prioritization.
+- Future enhancements:
+  - ML-based priority prediction.
+  - Deadline extraction via NLP.
+  - Behavioral analytics and cross-session reminders.
+
+> In the codebase, this feature lives primarily in the extension (tracking TODO comments) and dashboard (TODO view), with optional backend support.
 
 
 ## 4. Dependencies Overview
