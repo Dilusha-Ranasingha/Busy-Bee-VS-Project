@@ -1,5 +1,7 @@
 # 🐝 Busy Bee Project – Full Documentation
 
+> **📦 Repository:** [https://github.com/Dilusha-Ranasingha/Busy-Bee-VS-Project.git](https://github.com/Dilusha-Ranasingha/Busy-Bee-VS-Project.git)
+
 ## 1. 📋 Project Overview
 
 Busy Bee is a multi-package monorepo that provides:
@@ -49,42 +51,42 @@ Monorepo layout:
 ```text
 ┌───────────────────────────────────────────────┐
 │                  Developer                    │
-│     (VS Code with Busy Bee extension)        │
+│     (VS Code with Busy Bee extension)         │
 └───────────────────────────────────────────────┘
                     │
                     ▼
 ┌───────────────────────────────────────────────┐
 │             VS Code Extension                 │
 │  - extension.ts                               │
-│  - AuthManager (GitHub via VS Code)          │
-│  - Tracking (FileSwitchTracker + others)     │
-│  - ProductDashboardViewProvider (webview)    │
+│  - AuthManager (GitHub via VS Code)           │
+│  - Tracking (FileSwitchTracker + others)      │
+│  - ProductDashboardViewProvider (webview)     │
 └───────────────────────────────────────────────┘
                     │  HTTP (Axios)
                     ▼
 ┌───────────────────────────────────────────────┐
 │                Backend API                    │
-│  - Express app (api/app.ts)                  │
-│  - Features: products, fileSwitch, …         │
-│  - GitHub OAuth proxy for dashboard          │
+│  - Express app (api/app.ts)                   │
+│  - Features: products, fileSwitch, …          │
+│  - GitHub OAuth proxy for dashboard           │
 └───────────────────────────────────────────────┘
                     │  SQL (pg)
                     ▼
 ┌───────────────────────────────────────────────┐
 │              PostgreSQL Database              │
-│  - file_switch_windows                       │
+│  - file_switch_windows                        │
 │  - product tables                             │
-│  - other metrics tables (Code Risk, etc.)    │
+│  - other metrics tables (Code Risk, etc.)     │
 └───────────────────────────────────────────────┘
                     ▲
                     │ REST (fetch/Axios)
 ┌───────────────────────────────────────────────┐
-│          React Dashboard (Browser            │
-│          or VS Code Webview)                │
-│  - Product & metrics pages                  │
-│  - File Switch Rate analytics               │
-│  - Code Risk & Metrics Tracking UI          │
-│  - VS Code theme-aware styling              │
+│          React Dashboard (Browser             │
+│          or VS Code Webview)                  │
+│  - Product & metrics pages                    │
+│  - File Switch Rate analytics                 │
+│  - Code Risk & Metrics Tracking UI            │
+│  - VS Code theme-aware styling                │
 └───────────────────────────────────────────────┘
 ```
 
