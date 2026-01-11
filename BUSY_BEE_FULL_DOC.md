@@ -1,6 +1,6 @@
-# Busy Bee Project – Full Documentation
+# 🐝 Busy Bee Project – Full Documentation
 
-## 1. Project Overview
+## 1. 📋 Project Overview
 
 Busy Bee is a multi-package monorepo that provides:
 - A **VS Code extension** that tracks developer activity (file switching and other metrics) and embeds a dashboard in the sidebar.
@@ -18,9 +18,9 @@ Monorepo layout:
 - `packages/extension` – VS Code extension (tracking, GitHub auth, embedded dashboard webview).
 
 
-## 2. High-Level Architecture
+## 2. 🏗️ High-Level Architecture
 
-### 2.1 System Components
+### 2.1 🔧 System Components
 
 - **VS Code Extension**
   - Activates in the VS Code Extension Host.
@@ -44,7 +44,7 @@ Monorepo layout:
   - Integrates tightly with VS Code theme tokens (light / dark / high contrast).
   - Pages for products, file switch analytics, and (via other packages) Code Risk & Metrics Tracking.
 
-### 2.2 Architectural Diagram
+### 2.2 📐 Architectural Diagram
 
 ```text
 ┌───────────────────────────────────────────────┐
@@ -89,9 +89,9 @@ Monorepo layout:
 ```
 
 
-## 3. Main Features
+## 3. ⭐ Main Features
 
-### 3.1 Metrics Tracking – AI Productivity Coach
+### 3.1 📊 Metrics Tracking – AI Productivity Coach
 
 This feature is the **multi-dimensional behavioral metrics engine** behind Busy Bee – an AI Productivity Coach for VS Code.
 
@@ -99,7 +99,7 @@ This feature is the **multi-dimensional behavioral metrics engine** behind Busy 
 
 **Goal:** Measure coding behavior *fairly* and turn it into **actionable, AI-generated productivity insights**—without ever sending source code content.
 
-#### 3.1.1 End-to-end responsibilities (A → Z)
+#### 3.1.1 🎯 End-to-end responsibilities (A → Z)
 
 - Capture key developer signals from VS Code (edits, saves, file switching, diagnostics, tasks, commits, etc.).
 - Build sessions & events (session-based, event-based, or hourly depending on the metric).
@@ -113,7 +113,7 @@ This feature is the **multi-dimensional behavioral metrics engine** behind Busy 
 - Surface clear UI in the extension & dashboard with “best of” style cards:
   - best streaks, best commit hour, best build/test hour, fastest error fix, etc.
 
-#### 3.1.2 Why this is novel
+#### 3.1.2 💡 Why this is novel
 
 - Goes beyond simple time tracking or LOC counting.
 - Uses **multi-dimensional behavioral metrics** tied to real developer flow (focus, typing cadence, build/test loops, error fix times, etc.).
@@ -121,7 +121,7 @@ This feature is the **multi-dimensional behavioral metrics engine** behind Busy 
 - **Privacy-first**: only stores aggregates and metadata; never source code.
 - **Personalized AI coaching** based on each user’s own baseline, not generic benchmarks.
 
-#### 3.1.3 System overview
+#### 3.1.3 🔍 System overview
 
 High-level data flow:
 
@@ -140,7 +140,7 @@ High-level data flow:
 
 Authentication is typically via GitHub OAuth → backend-issued JWT, with secrets stored via `vscode.secrets` in the extension.
 
-#### 3.1.4 Logical architecture
+#### 3.1.4 🗂️ Logical architecture
 
 ```text
 Monorepo
@@ -166,7 +166,7 @@ busy-bee/
 └─ docker/                # docker-compose for Postgres, .env.example
 ```
 
-#### 3.1.5 Final metrics (agreed definitions)
+#### 3.1.5 📈 Final metrics (agreed definitions)
 
 **Legend:**
 - Session-based: Focus Streak, Edits per Minute, Save→Edit Ratio, Error Fix Time, Read vs Write.
@@ -175,7 +175,7 @@ busy-bee/
 
 Each metric has a clearly defined storage model and UI “best-of” surface.
 
-##### Focus Streak (per-file & global) – session-based
+##### 🔥 Focus Streak (per-file & global) – session-based
 
 - **Per-file streak:** continuous activity on the same file, ignoring micro-switches ≤ 30s.
 - **Global streak:** continuous VS Code activity; broken by 10 minutes idle or editor close.
@@ -192,7 +192,7 @@ global_focus_streak_count
 global_focus_time_min
 ```
 
-##### Edits per Minute (typing cadence) – session-based
+##### ⌨️ Edits per Minute (typing cadence) – session-based
 
 - Bucket 1-minute windows; count edit operations and inserted/deleted characters.
 - Session ends after 10 minutes without edits.
@@ -205,7 +205,7 @@ edits_per_min, insert_chars_per_min, delete_chars_per_min,
 add_delete_ratio, typing_burstiness_index, paste_events (optional)
 ```
 
-##### Save-to-Edit Ratio & Save Reason – session-based
+##### 💾 Save-to-Edit Ratio & Save Reason – session-based
 
 - Track manual vs autosave separately.
 - **Autosave compression:** collapse rapid autosaves until ≥ 1 min no edits.
@@ -221,30 +221,30 @@ save_to_edit_ratio_manual, save_to_edit_ratio_autosave, effective_save_to_edit_r
 median_secs_between_saves
 ```
 
-##### Diagnostics Density – event-based
+##### 🔬 Diagnostics Density – event-based
 
 - On diagnostics change (and/or save), create snapshot:
   `density_per_kloc = (errors + warnings) / max(0.001, lineCount / 1000)`.
 - UI shows highest-density and lowest (or zero/clean) events with timestamps.
 
-##### Error Fix Time – error-fix sessions
+##### ⏱️ Error Fix Time – error-fix sessions
 
 - Start session at first diagnostic; end when problem list returns to zero (debounced).
 - Track **Active/Pending/Resolved** per diagnostic and only time the active error to avoid queue bias.
 - UI surfaces fastest single fix and summary per session.
 
-##### Task Runs (build/test) & Pass Rate – hourly
+##### ✅ Task Runs (build/test) & Pass Rate – hourly
 
 - Uses VS Code `tasks` API to track build/test runs.
 - Store hourly rollups with pass rates and average durations.
 - UI shows best hour by pass rate (or most runs).
 
-##### Commit Cadence – hourly
+##### 📝 Commit Cadence – hourly
 
 - Uses VS Code Git API to detect completed commits.
 - Store hourly rollups; UI highlights hour with most commits (or configurable).
 
-##### Read vs Write Time – session-based
+##### 📖 Read vs Write Time – session-based
 
 - Rolling 5s windows:
   - **Write**: any edit.
@@ -252,7 +252,7 @@ median_secs_between_saves
   - **Inactive** otherwise; session ends after 10 minutes inactive.
 - UI shows highest read-time and highest write-time sessions.
 
-#### 3.1.6 AI data contracts
+#### 3.1.6 🤖 AI data contracts
 
 Only aggregates are sent to the AI scorer, e.g.:
 
@@ -281,7 +281,7 @@ Only aggregates are sent to the AI scorer, e.g.:
 
 AI returns a strict JSON payload with `score`, `confidence`, `why`, `risks`, and `recommendations` that can be rendered directly in the UI.
 
-#### 3.1.7 Database sketch
+#### 3.1.7 🗄️ Database sketch
 
 PostgreSQL tables include (simplified list):
 
@@ -291,7 +291,7 @@ PostgreSQL tables include (simplified list):
 
 These tables are designed for **best-of queries** and time-series analytics.
 
-#### 3.1.8 Privacy, ethics, and security
+#### 3.1.8 🔒 Privacy, ethics, and security
 
 - No source code ever sent; only aggregates & metadata.
 - Per-metric opt-in/out and local consent screen.
@@ -302,7 +302,7 @@ These tables are designed for **best-of queries** and time-series analytics.
 > Implementation-wise, this feature maps onto the existing trackers in `packages/extension/src/tracking`, backend metrics features, and dashboard hooks under `packages/dashboard/src/hooks`.
 
 
-### 3.2 Code Risk – Code Risk & Complexity Visual Analyzer
+### 3.2 ⚠️ Code Risk – Code Risk & Complexity Visual Analyzer
 
 This feature is the **Code Risk & Complexity Visual Analyzer**: an AI-powered, error-aware risk analysis component aimed at **individual developers** (students, freelancers, and solo programmers).
 
@@ -316,7 +316,7 @@ Unlike traditional static analysis tools, this feature:
 - Works **in real time**, **triggered by real errors** (not continuous scanning).
 - Provides **file-level risk visualization** directly in VS Code.
 
-#### 3.2.1 Problem it solves
+#### 3.2.1 🎯 Problem it solves
 
 Developers frequently struggle with:
 - Locating the actual problematic file in large projects.
@@ -328,7 +328,7 @@ Existing tools (SonarQube, CodeScene, etc.):
 - Require manual log inspection.
 - Are often not beginner-friendly and can slow development.
 
-#### 3.2.2 Solution summary
+#### 3.2.2 ✨ Solution summary
 
 The component introduces **event-triggered, AI-assisted risk analysis** that:
 - Activates only when errors occur.
@@ -337,7 +337,7 @@ The component introduces **event-triggered, AI-assisted risk analysis** that:
 - Uses Gemini AI to explain risk and suggest fixes.
 - Displays results via color-coded indicators inside VS Code.
 
-#### 3.2.3 High-level system architecture
+#### 3.2.3 🏛️ High-level system architecture
 
 ```text
 Developer (VS Code User)
@@ -371,7 +371,7 @@ VS Code UI / Webview
   - Explanations & guidance
 ```
 
-#### 3.2.4 Error session logic
+#### 3.2.4 🔄 Error session logic
 
 - **Error session** starts when the first error appears in a file.
 - Any additional errors within **1 minute** of the last error are grouped into the same session.
@@ -382,7 +382,7 @@ Example:
 - 08:00:40 – another error → session error count = 2.
 - 08:01:40 – no new errors → session ends → data sent to Gemini → risk calculated and displayed.
 
-#### 3.2.5 Data collected per error session (per file)
+#### 3.2.5 📦 Data collected per error session (per file)
 
 - `file_uri` – unique file identifier.
 - `loc` – lines of code.
@@ -422,7 +422,7 @@ Gemini returns, for example:
 }
 ```
 
-#### 3.2.6 Risk visualization
+#### 3.2.6 🎨 Risk visualization
 
 Risk levels are mapped to colors and UI:
 
@@ -434,7 +434,7 @@ Displayed via:
 - Code Risk panel (webview) in the sidebar.
 - Inline indicators and tooltips with explanations.
 
-#### 3.2.7 Sub-features
+#### 3.2.7 🧩 Sub-features
 
 - Error detection from VS Code Diagnostics.
 - Build failure detection.
@@ -445,14 +445,14 @@ Displayed via:
 - Risk explanation and fix-step guidance.
 - Color-coded UI visualization with live updates.
 
-#### 3.2.8 Database design (backend)
+#### 3.2.8 🗄️ Database design (backend)
 
 - `error_sessions` – stores per-session inputs sent to Gemini.
   - `session_id`, `file_uri`, `loc`, `error_count_session`, `insertions_15m`, `deletions_15m`, `session_start_time`, `session_end_time`, `all_error_messages`.
 - `gemini_risk_results` – stores AI outputs used by the UI.
   - `result_id`, `session_id`, `file_uri`, `risk_level`, `color_code`, `risk_explanation`, `error_explanation`, `fix_steps`, `created_at`.
 
-#### 3.2.9 Privacy, target users, and status
+#### 3.2.9 👥 Privacy, target users, and status
 
 - No source code content sent to AI; only structured metadata and error messages.
 - Data stored securely in PostgreSQL; designed for **individual** developer use.
@@ -465,7 +465,7 @@ Displayed via:
   - 🚧 UI polishing, advanced visualization, evaluation.
 
 
-### 3.3 Forecasting & Planning Engine
+### 3.3 🔮 Forecasting & Planning Engine
 
 This feature provides an **Intelligent Forecasting & Planning System** that predicts near-future productivity and helps developers create realistic, low-stress plans.
 
@@ -476,7 +476,7 @@ Instead of only showing past analytics, it focuses on:
 
 It is designed as an independent, modular system that consumes daily summary data produced by other Busy Bee modules.
 
-#### 3.3.1 Scope & responsibilities
+#### 3.3.1 📋 Scope & responsibilities
 
 This component **does not**:
 - Collect raw VS Code events.
@@ -487,7 +487,7 @@ It **only**:
 - Performs forecasting, planning, and explanation.
 - Exposes APIs for dashboards and chatbot UIs.
 
-#### 3.3.2 Architecture
+#### 3.3.2 🏗️ Architecture
 
 ```text
 +----------------------------+
@@ -527,7 +527,7 @@ It **only**:
 +----------------------------+
 ```
 
-#### 3.3.3 Data inputs
+#### 3.3.3 📥 Data inputs
 
 Daily aggregated tables (from Metrics Tracking and other modules):
 
@@ -540,7 +540,7 @@ Daily aggregated tables (from Metrics Tracking and other modules):
 
 Synthetic data can be used during development to simulate realistic patterns.
 
-#### 3.3.4 Machine learning design
+#### 3.3.4 🧠 Machine learning design
 
 - Model: **XGBoost Regression**.
 - Forecast horizon: **1–7 days** (short term).
@@ -558,13 +558,13 @@ Synthetic data can be used during development to simulate realistic patterns.
   - Confidence level (low/medium/high).
   - Best working window (day/night).
 
-#### 3.3.5 Explainability
+#### 3.3.5 💬 Explainability
 
 - Uses XGBoost feature importance and local approximations.
 - Provides **human-readable explanations**, not raw ML jargon.
 - Explainability is surfaced **on demand**, via chatbot or detail panels, to avoid cognitive overload.
 
-#### 3.3.6 Planning & feasibility engine
+#### 3.3.6 📅 Planning & feasibility engine
 
 Purpose: convert forecasts into **realistic, actionable plans**.
 
@@ -584,7 +584,7 @@ Purpose: convert forecasts into **realistic, actionable plans**.
   - Best work window.
   - Chatbot-ready explanation.
 
-#### 3.3.7 Chatbot interaction design
+#### 3.3.7 💭 Chatbot interaction design
 
 The primary user interface is a **calm, supportive chatbot** in the dashboard webview.
 
@@ -600,7 +600,7 @@ Examples of user intents:
 - “Why is confidence low?”
 - “What influenced the forecast?”
 
-#### 3.3.8 Frontend integration
+#### 3.3.8 🖥️ Frontend integration
 
 - Dashboard view (for supervisors/demos):
   - Forecast chart with confidence band.
@@ -612,7 +612,7 @@ Examples of user intents:
   - On-demand explanations.
   - Stress-aware interaction.
 
-#### 3.3.9 Technologies
+#### 3.3.9 🛠️ Technologies
 
 - Backend: Node.js, Express, TypeScript.
 - ML service: Python, FastAPI, XGBoost, Pandas, NumPy, Joblib.
@@ -620,13 +620,13 @@ Examples of user intents:
 - Frontend: React, TypeScript, Tailwind CSS, Chart.js, VS Code Webview APIs.
 
 
-### 3.4 Intelligent TODO Tracker
+### 3.4 ✔️ Intelligent TODO Tracker
 
 The **Intelligent TODO Tracker** is a workspace-aware, contextual productivity feature for VS Code that turns simple `// TODO:` comments into **intelligent, persistent, project-aware tasks**.
 
 It is a core component of Busy Bee, designed as part of a final-year BSc (Hons) IT research project with an emphasis on real-world workflows and extensibility.
 
-#### 3.4.1 Problem statement
+#### 3.4.1 ❓ Problem statement
 
 In real development:
 - Developers rely on `TODO`, `FIXME`, and similar comments.
@@ -637,7 +637,7 @@ In real development:
 
 This leads to accumulated technical debt and loss of context.
 
-#### 3.4.2 Solution overview
+#### 3.4.2 💡 Solution overview
 
 The tracker introduces:
 - **Workspace-scoped** TODO management (project-specific, like Git repos).
@@ -648,7 +648,7 @@ The tracker introduces:
 
 It operates entirely inside the developer’s normal workflow; no change to how comments are written.
 
-#### 3.4.3 System overview
+#### 3.4.3 🔍 System overview
 
 High-level layers:
 
@@ -659,7 +659,7 @@ High-level layers:
 
 These layers are loosely coupled for robustness and extensibility.
 
-#### 3.4.4 Architecture
+#### 3.4.4 🏛️ Architecture
 
 ```text
 VS Code Workspace
@@ -690,7 +690,7 @@ Backend Services (Optional)
   - Task summarization
 ```
 
-#### 3.4.5 Core sub-features
+#### 3.4.5 ⚙️ Core sub-features
 
 1. **Workspace-scoped TODO isolation**
    - TODOs are bound to the active workspace.
@@ -731,7 +731,7 @@ Backend Services (Optional)
    - Optional backend can provide priority scoring, urgency detection, and summarization.
    - Extension side remains responsive even if backend is offline.
 
-#### 3.4.6 Extension component structure
+#### 3.4.6 📂 Extension component structure
 
 Example structure under an extension feature folder:
 
@@ -750,7 +750,7 @@ features/todo-tracker/
   todo.telemetry.ts           # metrics and analytics hooks
 ```
 
-#### 3.4.7 Usage flow
+#### 3.4.7 🔄 Usage flow
 
 1. Open a workspace.
 2. Add a comment such as `// TODO: improve error handling`.
@@ -759,7 +759,7 @@ features/todo-tracker/
 5. View, filter, and resolve TODOs.
 6. Optionally trigger commands from the Command Palette.
 
-#### 3.4.8 Testing, research contribution, and roadmap
+#### 3.4.8 🧪 Testing, research contribution, and roadmap
 
 - Tested with multiple workspaces, including restart persistence and fallback storage.
 - Research contributions:
@@ -774,9 +774,9 @@ features/todo-tracker/
 > In the codebase, this feature lives primarily in the extension (tracking TODO comments) and dashboard (TODO view), with optional backend support.
 
 
-## 4. Dependencies Overview
+## 4. 📦 Dependencies Overview
 
-### 4.1 Root Workspace (busy-bee)
+### 4.1 🏠 Root Workspace (busy-bee)
 
 File: `package.json`
 
@@ -789,7 +789,7 @@ File: `package.json`
 - Dev dependencies:
   - `concurrently`, `prettier`, `typescript`.
 
-### 4.2 Backend (`packages/backend/package.json`)
+### 4.2 ⚙️ Backend (`packages/backend/package.json`)
 
 - Runtime dependencies:
   - `express` – HTTP server framework.
@@ -804,7 +804,7 @@ File: `package.json`
   - TypeScript tooling (`typescript`, `tsx`, `@types/*`).
   - ESLint types.
 
-### 4.3 Dashboard (`packages/dashboard/package.json`)
+### 4.3 📊 Dashboard (`packages/dashboard/package.json`)
 
 - Runtime dependencies:
   - `react`, `react-dom` – UI framework.
@@ -816,7 +816,7 @@ File: `package.json`
   - `eslint` + `typescript-eslint`, `@eslint/js` – linting.
   - `typescript`, `@types/react`, `@types/react-dom`, `@types/node`.
 
-### 4.4 Extension (`packages/extension/package.json`)
+### 4.4 🧩 Extension (`packages/extension/package.json`)
 
 - Runtime dependencies:
   - `axios` – HTTP client used from the extension to talk to the backend.
@@ -826,7 +826,7 @@ File: `package.json`
   - Build: `esbuild`, `npm-run-all`, `typescript` and `typescript-eslint`, `eslint`.
 
 
-## 5. Project History (High-Level)
+## 5. 📜 Project History (High-Level)
 
 This is a narrative summary based on the attached documents and structure rather than full git history.
 
@@ -871,20 +871,20 @@ This is a narrative summary based on the attached documents and structure rather
 > For precise commit-by-commit history, refer to `git log` in the repository; this section is a functional timeline based on the documentation you provided.
 
 
-## 6. Included Guides & Documentation (Merged Content)
+## 6. 📚 Included Guides & Documentation (Merged Content)
 
 Below are the original guides merged into this single file for convenience.
 
 ---
 
-### 6.1 GitHub Authentication Testing Guide (Extension)
+### 6.1 🔐 GitHub Authentication Testing Guide (Extension)
 
 > Source: `GITHUB_AUTH_TESTING.md`
 
-#### Overview
+#### 📖 Overview
 The Busy Bee extension now requires GitHub authentication to track file switching metrics. All data is associated with the authenticated GitHub user.
 
-#### System Architecture
+#### 🏗️ System Architecture
 
 **1. Extension (VS Code)**
 - `AuthManager` (`extension/src/auth/AuthManager.ts`): Manages GitHub OAuth using VS Code's built-in authentication provider.
@@ -904,7 +904,7 @@ The Busy Bee extension now requires GitHub authentication to track file switchin
 **3. Dashboard (React)**
 - Currently displays all sessions; will be updated to filter by authenticated user.
 
-#### Testing Steps
+#### 🧪 Testing Steps
 
 **Step 1: Start the Extension**
 ```bash
@@ -980,7 +980,7 @@ LIMIT 5;
    ```
 4. Verify tracking works without re-authentication.
 
-#### Expected Behavior
+#### ✨ Expected Behavior
 
 **When Signed In ✅**
 - File activations are tracked.
@@ -995,7 +995,7 @@ LIMIT 5;
 - Warning message shown if user switches files.
 - Stats command shows "Sign in with GitHub to view stats".
 
-#### API Testing with cURL
+#### 🔌 API Testing with cURL
 
 ```bash
 # Test creating a session (requires userId)
@@ -1018,7 +1018,7 @@ curl "http://localhost:4000/api/file-switch/sessions?date=2025-01-02&userId=1234
 curl "http://localhost:4000/api/file-switch/windows?sessionId=test-session-1&userId=12345"
 ```
 
-#### Troubleshooting
+#### 🔧 Troubleshooting
 
 - **"Sign in with GitHub" command not found**:
   ```bash
@@ -1038,7 +1038,7 @@ curl "http://localhost:4000/api/file-switch/windows?sessionId=test-session-1&use
   - Ensure `authManager.getUserId()` returns a value.
   - Ensure FileSwitchTracker receives `authManager` correctly.
 
-#### GitHub User ID Lookup
+#### 🔍 GitHub User ID Lookup
 
 ```bash
 curl https://api.github.com/users/{username}
@@ -1053,7 +1053,7 @@ authManager.getUser()
 
 ---
 
-### 6.2 GitHub OAuth Setup Guide (Dashboard + Backend)
+### 6.2 🔑 GitHub OAuth Setup Guide (Dashboard + Backend)
 
 > Source: `GITHUB_OAUTH_SETUP.md`
 
@@ -1061,7 +1061,7 @@ This guide describes setting up GitHub OAuth for:
 - VS Code extension (built-in, already working).
 - Dashboard (manual GitHub OAuth app).
 
-#### Overview
+#### 📖 Overview
 
 **VS Code Extension (Built-in Auth)**
 - Uses VS Code’s built-in GitHub provider.
@@ -1074,14 +1074,14 @@ This guide describes setting up GitHub OAuth for:
 - Backend handles code→token exchange.
 - Dashboard stores token in browser localStorage.
 
-#### Part 1: Extension
+#### 🧩 Part 1: Extension
 
 Already working – just run:
 1. Cmd/Ctrl+Shift+P.
 2. `Busy Bee: Sign in with GitHub`.
 3. Authorize in browser.
 
-#### Part 2: Dashboard OAuth Setup
+#### 📊 Part 2: Dashboard OAuth Setup
 
 **Step 1: Create a GitHub OAuth App**
 
@@ -1129,7 +1129,7 @@ Restart dashboard:
 npm run dev
 ```
 
-#### Testing Dashboard Authentication
+#### 🧪 Testing Dashboard Authentication
 
 1. Open `http://localhost:5173`.
 2. Click **Sign in with GitHub**.
@@ -1139,7 +1139,7 @@ npm run dev
    - File Switch page now filtered by your user.
    - Sign Out works.
 
-#### Production Deployment
+#### 🚀 Production Deployment
 
 - Create a production OAuth App with:
   ```
@@ -1150,20 +1150,20 @@ npm run dev
 - Update dashboard `VITE_GITHUB_CLIENT_ID` / `VITE_GITHUB_REDIRECT_URI`.
 - Keep secrets out of git; use environment management.
 
-#### Troubleshooting
+#### 🔧 Troubleshooting
 
 - **"OAuth not configured"** – ensure `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` are set and backend restarted.
 - **"Failed to exchange code for token"** – verify client secret & redirect URI; ensure backend on `http://localhost:4000`.
 - **Redirect loop / "Invalid OAuth state"** – clear browser localStorage; try again; check console.
 - **CORS errors** – verify backend CORS; backend on `http://localhost:4000` and dashboard on `http://localhost:5173`.
 
-#### Security Best Practices
+#### 🔒 Security Best Practices
 
 - Never commit `.env` files; use `.env.example` templates.
 - Use separate OAuth apps for dev and prod.
 - Rotate secrets regularly and limit scopes (`user:email`, `read:user`).
 
-#### Architecture Overview
+#### 🏛️ Architecture Overview
 
 ```text
 User → Dashboard → GitHub OAuth Popup
@@ -1185,7 +1185,7 @@ Make authenticated API calls to backend (with userId)
 
 ---
 
-### 6.3 VS Code Theme Integration – Implementation Summary
+### 6.3 🎨 VS Code Theme Integration – Implementation Summary
 
 > Source: `IMPLEMENTATION_SUMMARY.md`
 
@@ -1207,7 +1207,7 @@ Key design:
 
 ---
 
-### 6.4 Backend – Feature Overview & File Switch Tracking
+### 6.4 ⚙️ Backend – Feature Overview & File Switch Tracking
 
 > Sources: root `README.md` for backend + `packages/backend/README.md`
 
@@ -1225,7 +1225,7 @@ The File Switch feature:
 
 ---
 
-### 6.5 Extension – Busy Bee VS Code Extension Overview
+### 6.5 🧩 Extension – Busy Bee VS Code Extension Overview
 
 > Source: `packages/extension/README.md`
 
@@ -1250,7 +1250,7 @@ The File Switch feature:
 
 ---
 
-### 6.6 Dashboard – Package Overview
+### 6.6 📊 Dashboard – Package Overview
 
 > Source: `packages/dashboard/README.md`
 
@@ -1267,7 +1267,7 @@ The File Switch feature:
 
 ---
 
-### 6.7 Color Migration & VS Code Theme Integration Details
+### 6.7 🎨 Color Migration & VS Code Theme Integration Details
 
 > Sources: `COLOR_MIGRATION.md`, `VSCODE_THEME_INTEGRATION.md`, `RESPONSIVE_LAYOUT.md`, `packages/dashboard/QUICKSTART.md`
 
@@ -1295,7 +1295,7 @@ The File Switch feature:
 
 ---
 
-### 6.8 Extension Quickstart & Changelog
+### 6.8 🚀 Extension Quickstart & Changelog
 
 > Sources: `packages/extension/vsc-extension-quickstart.md`, `packages/extension/CHANGELOG.md`
 
@@ -1306,7 +1306,7 @@ The File Switch feature:
 - Changelog currently records an initial “Unreleased / Initial release”.
 
 
-## 7. How to Use This Document
+## 7. 📖 How to Use This Document
 
 - Use **Sections 1–3** for a conceptual overview (project, architecture, main features including Code Risk & Metrics Tracking).
 - Use **Section 4** to understand dependencies across packages.
