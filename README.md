@@ -1,4 +1,4 @@
-# 🐝 Busy Bee Project 
+# Busy Bee Project 
 
 > **📦 Repository:** [https://github.com/Dilusha-Ranasingha/Busy-Bee-VS-Project.git](https://github.com/Dilusha-Ranasingha/Busy-Bee-VS-Project.git)
 
@@ -128,16 +128,17 @@ This feature is the **multi-dimensional behavioral metrics engine** behind Busy 
 High-level data flow:
 
 ```text
-┌─────────────────┐        HTTPS (JWT)         ┌──────────────────────┐
-│ VS Code         │ ─────────────────────────▶ │ Backend API (Node/TS)│
-│  Extension (TS) │                            │  + PostgreSQL        │
-│                 │ ◀───────────────────────── │  + AI client         │
-└─────┬───────────┘        Insights            └─────┬────────────────┘
-      │  editor/doc/debug/tasks/git events           │
-      │                                              │
-      │                Web Dashboard (React/Tailwind)│
-      │                    (students/admins)         │
-      └──────────────────────────────────────────────┘
++---------------------+        HTTPS (JWT)        +---------------------------------+
+| VS Code Extension   | ------------------------> | Backend API (Node / TypeScript) |
+| (TypeScript)        |                           | + PostgreSQL                    |
+|                     | <------------------------ | + AI Client                     |
++----------+----------+        Insights           +---------------+-----------------+
+           | editor / doc / debug / tasks / git events            |
+           |                                                      |
+           |                 Web Dashboard (React / Tailwind)     |
+           |                       (students / admins)            |
+           +------------------------------------------------------+
+
 ```
 
 Authentication is typically via GitHub OAuth → backend-issued JWT, with secrets stored via `vscode.secrets` in the extension.
