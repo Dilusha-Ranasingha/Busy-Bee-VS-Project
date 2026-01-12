@@ -394,7 +394,7 @@ Example:
 - `all_error_messages` – error texts.
 - `session_start_time`, `session_end_time`.
 
-⚠️ **No source code content is sent to AI** – only metadata and error messages.
+ **No source code content is sent to AI** – only metadata and error messages.
 
 Typical payload to Gemini:
 
@@ -468,7 +468,7 @@ Displayed via:
   - UI polishing, advanced visualization, evaluation.
 
 
-### 3.3 🔮 Forecasting & Planning Engine
+### 3.3 Forecasting & Planning Engine
 
 This feature provides an **Intelligent Forecasting & Planning System** that predicts near-future productivity and helps developers create realistic, low-stress plans.
 
