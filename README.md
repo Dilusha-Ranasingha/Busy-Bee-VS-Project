@@ -1,4 +1,4 @@
-# Busy Bee Project 
+# Busy Bee Project 🐝
 
 > **📦 Repository:** [https://github.com/Dilusha-Ranasingha/Busy-Bee-VS-Project.git](https://github.com/Dilusha-Ranasingha/Busy-Bee-VS-Project.git)
 
