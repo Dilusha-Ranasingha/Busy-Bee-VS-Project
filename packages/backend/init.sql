@@ -665,3 +665,62 @@ CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_active ON gemini_risk_results
 CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_session ON gemini_risk_results(session_id);
 CREATE INDEX IF NOT EXISTS idx_gemini_risk_results_error_session ON gemini_risk_results(error_session_id);
 
+
+-- ========================================
+-- ML FORECASTING TABLES
+-- ========================================
+
+-- Add is_synthetic flag to daily_metrics for test data filtering
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns 
+    WHERE table_name = 'daily_metrics' AND column_name = 'is_synthetic'
+  ) THEN
+    ALTER TABLE daily_metrics ADD COLUMN is_synthetic BOOLEAN DEFAULT FALSE;
+  END IF;
+END $$;
+
+-- Create index on is_synthetic for faster filtering
+CREATE INDEX IF NOT EXISTS idx_daily_metrics_synthetic ON daily_metrics(user_id, date, is_synthetic);
+
+-- Forecast results storage
+CREATE TABLE IF NOT EXISTS forecast_results (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  forecast_date DATE NOT NULL,          -- When the forecast was generated
+  target_date DATE NOT NULL,            -- The date being forecasted
+  kpi_category TEXT NOT NULL,           -- Which KPI: focus_streak, file_switch, etc.
+  predicted_value JSONB NOT NULL,       -- Predicted metric values as JSON
+  confidence_lower JSONB,               -- Lower confidence bound
+  confidence_upper JSONB,               -- Upper confidence bound
+  model_version TEXT,                   -- Model version identifier
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  
+  UNIQUE (user_id, forecast_date, target_date, kpi_category)
+);
+
+-- Indexes for forecast queries
+CREATE INDEX IF NOT EXISTS idx_forecast_results_user ON forecast_results(user_id, target_date DESC);
+CREATE INDEX IF NOT EXISTS idx_forecast_results_target ON forecast_results(target_date, user_id);
+CREATE INDEX IF NOT EXISTS idx_forecast_results_created ON forecast_results(created_at DESC);
+
+-- Productivity plans storage
+CREATE TABLE IF NOT EXISTS productivity_plans (
+  id SERIAL PRIMARY KEY,
+  user_id TEXT NOT NULL,
+  plan_start_date DATE NOT NULL,
+  plan_end_date DATE NOT NULL,
+  target_hours NUMERIC NOT NULL,
+  is_feasible BOOLEAN NOT NULL,
+  feasibility_score NUMERIC,            -- 0-100 score
+  recommended_schedule JSONB NOT NULL,  -- Daily hour allocations
+  best_hours JSONB,                     -- Time-of-day recommendations
+  warnings JSONB,                       -- Early warning messages
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes for plan queries
+CREATE INDEX IF NOT EXISTS idx_productivity_plans_user ON productivity_plans(user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_productivity_plans_dates ON productivity_plans(plan_start_date, plan_end_date);
+

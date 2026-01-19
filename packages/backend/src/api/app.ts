@@ -18,6 +18,8 @@ import productivityScoreRoutes from '../features/Metrics-Tracking/productivitySc
 import authRoutes from '../features/auth/auth.routes.js';
 import errorSessionsRoutes from '../features/Code-Risk/errorSessions/errorSessions.routes.js';
 import geminiRiskResultsRoutes from '../features/Code-Risk/geminiRiskResults/geminiRiskResults.routes.js';
+import { createMLForecastingRouter } from '../features/ML-Forecasting/mlForecasting.routes.js';
+import { getPool } from '../config/db.js';
 import { errorHandler } from '../middlewares/error.js';
 
 const app: Application = express();
@@ -43,6 +45,17 @@ app.use('/api/productivity-score', productivityScoreRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/code-risk/error-sessions', errorSessionsRoutes);
 app.use('/api/code-risk/risk-results', geminiRiskResultsRoutes);
+
+// ML Forecasting routes - initialized lazily to use pool after connection
+app.use('/api/ml-forecasting', (req, res, next) => {
+  try {
+    const pool = getPool();
+    const router = createMLForecastingRouter(pool);
+    router(req, res, next);
+  } catch (error) {
+    next(error);
+  }
+});
 
 app.use(errorHandler);
 

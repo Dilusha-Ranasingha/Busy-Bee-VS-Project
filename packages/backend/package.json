@@ -9,7 +9,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "eslint src --ext .ts",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "generate-synthetic-data": "tsx src/scripts/generateSyntheticData.ts"
   },
   "keywords": [
     "api",
