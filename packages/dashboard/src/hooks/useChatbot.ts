@@ -25,22 +25,33 @@ export const useChatbot = (userId: string | null) => {
     try {
       const response = await chatbotService.sendMessage(userId, message, messages);
 
-      if (response.status === 'error') {
-        setError(response.message || 'Failed to get response');
+      // Handle error response
+      if (!response || (response as any).error) {
+        const errorMsg = (response as any).error || (response as any).message || 'Failed to get response';
+        setError(errorMsg);
         return;
       }
+
+      // Normalize data shape: backend sends { type, data }; ensure `type` is preserved
+      const rawData = (response as any)?.data;
+      const innerData = (response as any)?.data?.data;
+      const payloadData = innerData
+        ? { ...innerData, type: innerData.type ?? rawData?.type }
+        : rawData;
 
       // Add assistant message
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: response.message,
+        content: response.message || 'No response',
         timestamp: new Date(),
-        data: response.data,
+        data: payloadData || undefined,
       };
       setMessages((prev) => [...prev, assistantMessage]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      const errorMsg = err instanceof Error ? err.message : 'An error occurred';
+      console.error('Chatbot error:', err);
+      setError(errorMsg);
     } finally {
       setIsLoading(false);
     }

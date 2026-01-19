@@ -6,6 +6,12 @@ interface PlanResultCardProps {
 }
 
 const PlanResultCard: React.FC<PlanResultCardProps> = ({ data }) => {
+  const schedule = data.schedule || [];
+  const warnings = data.warnings || [];
+  
+  // Show all days for any plan (users want to see full schedule)
+  const displayCount = schedule.length;
+
   const getProductivityColor = (level: 'high' | 'medium' | 'low') => {
     switch (level) {
       case 'high':
@@ -17,6 +23,9 @@ const PlanResultCard: React.FC<PlanResultCardProps> = ({ data }) => {
     }
   };
 
+  // Consider plans >95% feasible as practically feasible (even if ML says false)
+  const displayAsFeasible = data.isFeasible || (data.feasibilityScore && data.feasibilityScore > 95);
+
   return (
     <div className="bg-gray-900/50 border border-gray-700 rounded-lg p-4 space-y-3">
       <div className="flex items-center justify-between">
@@ -26,10 +35,10 @@ const PlanResultCard: React.FC<PlanResultCardProps> = ({ data }) => {
         </h4>
         <span
           className={`text-xs px-2 py-1 rounded ${
-            data.isFeasible ? 'bg-green-700 text-green-100' : 'bg-red-700 text-red-100'
+            displayAsFeasible ? 'bg-green-700 text-green-100' : 'bg-red-700 text-red-100'
           }`}
         >
-          {data.isFeasible ? '✓ Feasible' : '✗ Not Feasible'}
+          {displayAsFeasible ? '✓ Feasible' : '✗ Not Feasible'}
         </span>
       </div>
 
@@ -50,7 +59,7 @@ const PlanResultCard: React.FC<PlanResultCardProps> = ({ data }) => {
 
       <div className="space-y-2">
         <div className="text-xs font-semibold text-gray-400">Daily Schedule</div>
-        {data.schedule.slice(0, 3).map((day, index) => (
+        {schedule.slice(0, displayCount).map((day, index) => (
           <div
             key={index}
             className="flex items-center justify-between p-2 bg-gray-800/50 rounded"
@@ -74,16 +83,16 @@ const PlanResultCard: React.FC<PlanResultCardProps> = ({ data }) => {
         ))}
       </div>
 
-      {data.schedule.length > 3 && (
+      {schedule.length > displayCount && (
         <p className="text-xs text-gray-500 text-center">
-          + {data.schedule.length - 3} more days
+          + {schedule.length - displayCount} more days
         </p>
       )}
 
-      {data.warnings.length > 0 && (
+      {warnings.length > 0 && (
         <div className="space-y-1">
           <div className="text-xs font-semibold text-yellow-400">⚠️ Warnings</div>
-          {data.warnings.slice(0, 2).map((warning, index) => (
+          {warnings.slice(0, 2).map((warning, index) => (
             <div key={index} className="text-xs text-gray-400 pl-4">
               • {warning.message}
             </div>

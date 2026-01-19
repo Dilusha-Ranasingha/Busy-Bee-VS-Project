@@ -30,12 +30,21 @@ class ApiClient {
         },
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || `Request failed: ${response.status}`);
+      // Try to parse response as JSON
+      let data: any;
+      try {
+        data = await response.json();
+      } catch {
+        data = { error: `HTTP ${response.status}`, message: await response.text() };
       }
 
-      return response.json();
+      // Return both success and error responses
+      // Let the consumer handle error checking
+      if (!response.ok) {
+        return { ...data, error: data.error || `HTTP ${response.status}` } as T;
+      }
+
+      return data;
     } catch (error) {
       if (error instanceof Error) {
         throw error;
