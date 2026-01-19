@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { MLForecastingController } from './mlForecasting.controller';
-import { handleChatMessage, getSuggestedPrompts } from './chatbot.controller';
 import { Pool } from 'pg';
 
 export function createMLForecastingRouter(pool: Pool): Router {
@@ -23,10 +22,6 @@ export function createMLForecastingRouter(pool: Pool): Router {
 
   // Health Check
   router.get('/health', controller.checkHealth);
-
-  // Chatbot routes
-  router.post('/chat', handleChatMessage);
-  router.get('/chat/prompts/:userId', getSuggestedPrompts);
 
   return router;
 }
