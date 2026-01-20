@@ -154,6 +154,16 @@ export class MLForecastingService {
     return await mlClient.healthCheck();
   }
 
+  /**
+   * Clear forecast cache for a user
+   */
+  async clearForecastCache(userId: string): Promise<void> {
+    await this.pool.query(
+      `DELETE FROM forecast_results WHERE user_id = $1`,
+      [userId]
+    );
+  }
+
   // ===== Private Helper Methods =====
 
   private async cacheForecast(userId: string, predictions: ForecastPrediction[]) {

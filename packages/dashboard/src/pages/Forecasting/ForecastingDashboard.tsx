@@ -97,11 +97,6 @@ const ForecastingDashboard: React.FC = () => {
         onTrain={handleTrainModel}
       />
 
-      {/* Early Warnings */}
-      {plan?.warnings && plan.warnings.length > 0 && (
-        <EarlyWarnings warnings={plan.warnings} />
-      )}
-
       {/* Forecast Charts */}
       {forecastError && (
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
@@ -121,17 +116,10 @@ const ForecastingDashboard: React.FC = () => {
           <h2 className="text-2xl font-semibold text-white">7-Day Forecast</h2>
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
             <ForecastChart
-              title="Focus Streak (Global)"
+              title="Focus Streak"
               data={forecast.predictions}
               dataKey="focus_streak_longest_global"
               color="#10b981"
-              unit="minutes"
-            />
-            <ForecastChart
-              title="Focus Streak (File)"
-              data={forecast.predictions}
-              dataKey="focus_streak_longest_file"
-              color="#3b82f6"
               unit="minutes"
             />
             <ForecastChart
@@ -153,7 +141,7 @@ const ForecastingDashboard: React.FC = () => {
               data={forecast.predictions}
               dataKey="diagnostics_avg_density"
               color="#ef4444"
-              unit="errors/min"
+              unit="issues/kloc"
             />
             <ForecastChart
               title="Errors Resolved"
@@ -191,6 +179,11 @@ const ForecastingDashboard: React.FC = () => {
           />
           {plan && <PlanResultsView plan={plan} onClose={reset} />}
         </div>
+        
+        {/* Early Warnings - Show right after the plan */}
+        {plan?.warnings && plan.warnings.length > 0 && (
+          <EarlyWarnings warnings={plan.warnings} />
+        )}
       </div>
     </div>
   );

@@ -65,6 +65,30 @@ export class MLForecastingController {
   };
 
   /**
+   * DELETE /api/ml-forecasting/forecast/:userId/cache
+   * Clear cached forecast for a user
+   */
+  clearCache = async (req: Request, res: Response) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({ error: 'userId is required' });
+      }
+
+      await this.service.clearForecastCache(userId);
+
+      return res.status(200).json({ 
+        status: 'success',
+        message: `Forecast cache cleared for user ${userId}` 
+      });
+    } catch (error: any) {
+      console.error('Clear cache error:', error);
+      return res.status(500).json({ error: error.message });
+    }
+  };
+
+  /**
    * GET /api/ml-forecasting/forecast/:userId/confidence
    * Get forecast with confidence intervals
    */

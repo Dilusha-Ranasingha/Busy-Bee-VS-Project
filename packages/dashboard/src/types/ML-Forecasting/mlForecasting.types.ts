@@ -25,16 +25,50 @@ export interface ForecastResponse {
 
 export interface DailySchedule {
   date: string;
+  day_name?: string;
   allocated_hours: number;
   available_hours: number;
   productivity_level: 'high' | 'medium' | 'low';
   note?: string;
+  recommended_time_windows?: Array<{
+    time_range: string;
+    period: string;
+    confidence: number;
+    reason: string;
+  }>;
+  task_recommendations?: Array<{
+    task_type?: string;
+    task?: string;
+    description?: string;
+    reason: string;
+    priority?: 'critical' | 'high' | 'medium' | 'low';
+    time_allocation?: string;
+    metrics?: {
+      focus?: number;
+      file_switch?: number;
+      errors?: number;
+      edits?: number;
+      commits?: number;
+      idle?: number;
+      threshold?: number;
+    };
+  }>;
+  metrics_summary?: {
+    predicted_focus_min: number;
+    predicted_file_switches_per_min: number;
+    predicted_errors_per_kloc: number;
+  };
 }
 
 export interface BestHours {
   recommended_time: 'morning' | 'afternoon' | 'evening' | 'flexible';
   hours: string;
   reason: string;
+  daily_windows?: Array<{
+    day: string;
+    time_slot: string;
+    hours: string;
+  }>;
 }
 
 export interface Warning {
@@ -42,6 +76,18 @@ export interface Warning {
   severity: 'high' | 'medium' | 'low';
   date?: string;
   message: string;
+}
+
+export interface TargetAdjustment {
+  type: 'stretch_goal' | 'conservative' | 'feasible';
+  original_target: number;
+  suggested_target: number;
+  stretch_required?: number;
+  stretch_percentage?: number;
+  stretch_confidence?: 'high' | 'medium' | 'low';
+  historical_peak?: number;
+  historical_average?: number;
+  reason: string;
 }
 
 export interface ProductivityPlan {
@@ -56,6 +102,7 @@ export interface ProductivityPlan {
   daily_schedule?: DailySchedule[];
   best_hours?: BestHours;
   warnings?: Warning[];
+  target_adjustment?: TargetAdjustment;
   generated_at?: string;
   message?: string;
 }

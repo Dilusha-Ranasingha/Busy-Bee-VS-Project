@@ -12,6 +12,7 @@ export function createMLForecastingRouter(pool: Pool): Router {
   // Forecasting
   router.get('/forecast/:userId', controller.getForecast);
   router.get('/forecast/:userId/confidence', controller.getForecastWithConfidence);
+  router.delete('/forecast/:userId/cache', controller.clearCache);
 
   // Plan Generation
   router.post('/generate-plan', controller.generatePlan);

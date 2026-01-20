@@ -97,45 +97,50 @@ class FeatureEngineer:
         features['date'] = pd.to_datetime(df['date'])
         
         # File switch features
-        features['file_switch_avg_rate'] = df['file_switch'].apply(lambda x: x.get('avg_rate_per_min', 0) if x else 0)
-        features['file_switch_p95'] = df['file_switch'].apply(lambda x: x.get('p95_rate_per_min', 0) if x else 0)
-        features['file_switch_activations'] = df['file_switch'].apply(lambda x: x.get('total_activations', 0) if x else 0)
+        features['file_switch_avg_rate'] = df['file_switch'].apply(lambda x: x.get('file_switch_rate_avg', 0) if x else 0)
+        features['file_switch_p95'] = df['file_switch'].apply(lambda x: x.get('file_switch_rate_p95', 0) if x else 0)
+        features['file_switch_activations'] = df['file_switch'].apply(lambda x: x.get('file_switch_count_total', 0) if x else 0)
         
         # Focus streak features
-        features['focus_streak_longest_global'] = df['focus_streak'].apply(lambda x: x.get('longest_global_min', 0) if x else 0)
-        features['focus_streak_longest_file'] = df['focus_streak'].apply(lambda x: x.get('longest_per_file_min', 0) if x else 0)
+        features['focus_streak_longest_global'] = df['focus_streak'].apply(lambda x: x.get('global_focus_streak_max_min', 0) if x else 0)
+        features['focus_streak_longest_file'] = df['focus_streak'].apply(lambda x: x.get('per_file_focus_streak_max_min', 0) if x else 0)
         
         # Edits per minute features
-        features['edits_avg_rate'] = df['edits_per_min'].apply(lambda x: x.get('avg_edits_per_min', 0) if x else 0)
-        features['edits_p95_rate'] = df['edits_per_min'].apply(lambda x: x.get('p95_edits_per_min', 0) if x else 0)
-        features['typing_burstiness'] = df['edits_per_min'].apply(lambda x: x.get('typing_burstiness_index', 0) if x else 0)
-        features['total_paste_ops'] = df['edits_per_min'].apply(lambda x: x.get('total_paste_ops', 0) if x else 0)
-        features['total_active_time'] = df['edits_per_min'].apply(lambda x: x.get('total_active_time_min', 0) if x else 0)
+        features['edits_avg_rate'] = df['edits_per_min'].apply(lambda x: x.get('edits_per_min_avg', 0) if x else 0)
+        features['edits_p95_rate'] = df['edits_per_min'].apply(lambda x: x.get('edits_per_min_p95', 0) if x else 0)
+        features['typing_burstiness'] = df['edits_per_min'].apply(lambda x: x.get('typing_burstiness_index_avg', 0) if x else 0)
+        features['total_paste_ops'] = df['edits_per_min'].apply(lambda x: x.get('paste_events_total', 0) if x else 0)
+        features['total_active_time'] = df['edits_per_min'].apply(lambda x: x.get('active_time_min_from_edits', 0) if x else 0)
         
         # Save to edit ratio features
-        features['saves_manual'] = df['saves_to_edit_ratio'].apply(lambda x: x.get('saves_manual', 0) if x else 0)
-        features['save_efficiency'] = df['saves_to_edit_ratio'].apply(lambda x: x.get('overall_efficiency', 0) if x else 0)
+        features['saves_manual'] = df['saves_to_edit_ratio'].apply(lambda x: x.get('save_to_edit_ratio_manual_avg', 0) if x else 0)
+        features['save_efficiency'] = df['saves_to_edit_ratio'].apply(lambda x: x.get('effective_save_to_edit_ratio_avg', 0) if x else 0)
+        features['save_frequency'] = df['saves_to_edit_ratio'].apply(lambda x: x.get('median_secs_between_saves', 0) if x else 0)
+        features['autosave_count'] = df['saves_to_edit_ratio'].apply(lambda x: x.get('checkpoint_autosave_count_total', 0) if x else 0)
         
         # Diagnostics features
-        features['diagnostics_avg_density'] = df['diagnostics_per_kloc'].apply(lambda x: x.get('avg_density_per_kloc', 0) if x else 0)
-        features['diagnostics_peak_density'] = df['diagnostics_per_kloc'].apply(lambda x: x.get('peak_density_per_kloc', 0) if x else 0)
+        features['diagnostics_avg_density'] = df['diagnostics_per_kloc'].apply(lambda x: x.get('diagnostics_density_avg_per_kloc', 0) if x else 0)
+        features['diagnostics_peak_density'] = df['diagnostics_per_kloc'].apply(lambda x: x.get('diagnostics_hotspot_max_per_kloc', 0) if x else 0)
         
         # Error fix features
-        features['errors_resolved'] = df['error_fix'].apply(lambda x: x.get('errors_resolved', 0) if x else 0)
-        features['error_fix_median_time'] = df['error_fix'].apply(lambda x: x.get('median_fix_time_sec', 0) if x else 0)
+        features['errors_resolved'] = df['error_fix'].apply(lambda x: x.get('fixes_count', 0) if x else 0)
+        features['error_fix_median_time'] = df['error_fix'].apply(lambda x: x.get('median_active_fix_time_min', 0) if x else 0)
         
         # Task features
         features['test_runs'] = df['tasks'].apply(lambda x: x.get('test_runs', 0) if x else 0)
         features['build_runs'] = df['tasks'].apply(lambda x: x.get('build_runs', 0) if x else 0)
-        features['task_success_rate'] = df['tasks'].apply(lambda x: x.get('success_rate', 0) if x else 0)
+        features['task_success_rate'] = df['tasks'].apply(lambda x: x.get('overall_pass_rate', 0) if x else 0)
+        features['test_duration'] = df['tasks'].apply(lambda x: x.get('avg_test_duration_sec', 0) if x else 0)
         
         # Commit features
-        features['commits_count'] = df['commits'].apply(lambda x: x.get('commits_count', 0) if x else 0)
-        features['commit_cadence'] = df['commits'].apply(lambda x: x.get('cadence_per_hour', 0) if x else 0)
+        features['commits_count'] = df['commits'].apply(lambda x: x.get('commits_total', 0) if x else 0)
+        features['commit_cadence'] = df['commits'].apply(lambda x: x.get('best_commits_in_any_hour', 0) if x else 0)
+        features['commit_velocity'] = df['commits'].apply(lambda x: x.get('median_mins_between_commits', 0) if x else 0)
+        features['edits_per_commit'] = df['commits'].apply(lambda x: x.get('avg_edits_per_commit', 0) if x else 0)
         
         # Idle features
-        features['idle_distraction_time'] = df['idle'].apply(lambda x: x.get('distraction_time_min', 0) if x else 0)
-        features['idle_periods'] = df['idle'].apply(lambda x: x.get('idle_periods', 0) if x else 0)
+        features['idle_distraction_time'] = df['idle'].apply(lambda x: x.get('idle_time_min_total', 0) if x else 0)
+        features['idle_periods'] = df['idle'].apply(lambda x: x.get('idle_sessions_count', 0) if x else 0)
         
         # Temporal features
         features['day_of_week'] = features['date'].dt.dayofweek
@@ -180,15 +185,15 @@ class FeatureEngineer:
             # Edits
             'edits_avg_rate', 'edits_p95_rate', 'typing_burstiness', 'total_paste_ops', 'total_active_time',
             # Saves
-            'saves_manual', 'save_efficiency',
+            'saves_manual', 'save_efficiency', 'save_frequency', 'autosave_count',
             # Diagnostics
             'diagnostics_avg_density', 'diagnostics_peak_density',
             # Errors
             'errors_resolved', 'error_fix_median_time',
             # Tasks
-            'test_runs', 'build_runs', 'task_success_rate',
+            'test_runs', 'build_runs', 'task_success_rate', 'test_duration',
             # Commits
-            'commits_count', 'commit_cadence',
+            'commits_count', 'commit_cadence', 'commit_velocity', 'edits_per_commit',
             # Idle
             'idle_distraction_time', 'idle_periods',
             # Temporal

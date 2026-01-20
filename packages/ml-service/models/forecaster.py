@@ -9,7 +9,7 @@ class Forecaster:
     def __init__(self):
         self.feature_engineer = FeatureEngineer()
     
-    def predict(self, model_package, recent_data: pd.DataFrame, days: int = 7):
+    def predict(self, model_package, recent_data: pd.DataFrame, days: int = 7, user_id: str = None):
         """
         Generate multi-day ahead predictions
         
@@ -17,6 +17,7 @@ class Forecaster:
             model_package: Trained model package with models and metadata
             recent_data: Recent historical data for context
             days: Number of days to forecast
+            user_id: User identifier to include in predictions
             
         Returns:
             list: Predictions for each day
@@ -26,6 +27,7 @@ class Forecaster:
         
         models = model_package['models']
         feature_names = model_package['feature_names']
+        user_id = user_id or model_package.get('user_id', 'unknown')
         
         # Prepare features from recent data
         features, _ = self.feature_engineer.prepare_features(recent_data)
@@ -43,12 +45,39 @@ class Forecaster:
             X = current_features[feature_names].values
             
             # Predict each target metric
-            day_prediction = {'date': forecast_date.isoformat()}
+            day_prediction = {
+                'date': forecast_date.isoformat(),
+                'user_id': user_id
+            }
             
             for target_name, model in models.items():
                 pred_value = model.predict(X)[0]
                 pred_value = max(0, pred_value)  # Ensure non-negative predictions
                 day_prediction[target_name] = float(round(pred_value, 2))
+            
+            # Calculate idle_distraction_time based on predicted productivity
+            # Lower focus = more idle time, higher focus = less idle time
+            if 'idle_distraction_time' in current_features.columns:
+                base_idle = float(current_features['idle_distraction_time'].values[0])
+                predicted_focus = day_prediction.get('focus_streak_longest_global', 40)
+                
+                # Inverse relationship: low focus (20 min) -> more idle, high focus (60 min) -> less idle
+                # Normalize focus to 0-1 range (assuming 20-60 min range)
+                focus_factor = max(0, min(1, (predicted_focus - 20) / 40))
+                
+                # Higher focus -> less idle (0.6-1.0x of base), lower focus -> more idle (1.0-1.4x of base)
+                idle_multiplier = 1.4 - (focus_factor * 0.8)
+                
+                day_prediction['idle_distraction_time'] = float(round(base_idle * idle_multiplier, 2))
+            
+            # Add other important metrics from features for comprehensive predictions
+            additional_metrics = [
+                'commit_velocity', 'save_frequency', 'autosave_count', 
+                'test_duration', 'edits_per_commit', 'task_success_rate'
+            ]
+            for metric in additional_metrics:
+                if metric in current_features.columns and metric not in day_prediction:
+                    day_prediction[metric] = float(current_features[metric].values[0])
             
             predictions.append(day_prediction)
             

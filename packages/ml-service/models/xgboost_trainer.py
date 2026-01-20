@@ -20,7 +20,7 @@ class XGBoostTrainer:
     
     def train(self, features, targets, user_id: str):
         """
-        Train XGBoost models for each target metric
+        Train XGBoost models for each target metric with recency weighting
         
         Args:
             features: Feature DataFrame
@@ -37,6 +37,15 @@ class XGBoostTrainer:
         feature_cols = [col for col in features.columns if col != 'date']
         X = features[feature_cols].values
         
+        # Calculate exponential recency weights (recent data gets 2-3x more importance)
+        # Last 7-14 days get significantly higher weights
+        n_samples = len(X)
+        days_offset = np.arange(n_samples)  # 0, 1, 2, ..., n-1
+        # Exponential decay: weights increase from ~0.37 (oldest) to 1.0 (most recent)
+        sample_weights = np.exp(days_offset / n_samples)
+        # Normalize so last 14 days get ~2.5x more weight than first 14 days
+        sample_weights = sample_weights / np.mean(sample_weights)
+        
         models = {}
         metrics = {}
         
@@ -51,10 +60,12 @@ class XGBoostTrainer:
             for train_idx, val_idx in tscv.split(X):
                 X_train, X_val = X[train_idx], X[val_idx]
                 y_train, y_val = y[train_idx], y[val_idx]
+                weights_train = sample_weights[train_idx]
                 
                 model = xgb.XGBRegressor(**self.params)
                 model.fit(
                     X_train, y_train,
+                    sample_weight=weights_train,  # Apply recency weighting
                     eval_set=[(X_val, y_val)],
                     verbose=False
                 )
@@ -63,9 +74,9 @@ class XGBoostTrainer:
                 mae = mean_absolute_error(y_val, y_pred)
                 cv_scores.append(mae)
             
-            # Train final model on all data
+            # Train final model on all data with recency weights
             final_model = xgb.XGBRegressor(**self.params)
-            final_model.fit(X, y, verbose=False)
+            final_model.fit(X, y, sample_weight=sample_weights, verbose=False)
             
             models[target_col] = final_model
             

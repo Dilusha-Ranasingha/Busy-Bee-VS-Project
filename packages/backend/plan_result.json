@@ -1,0 +1,290 @@
+{
+    "adjusted_target": 40,
+    "best_hours": {
+        "daily_windows": [],
+        "hours": "9AM - 12PM",
+        "reason": "General recommendation (error retrieving historical data)",
+        "recommended_time": "morning"
+    },
+    "daily_schedule": [
+        {
+            "allocated_hours": 4.9,
+            "available_hours": 4.9,
+            "date": "2026-01-20",
+            "day_name": "Tuesday",
+            "metrics_summary": {
+                "predicted_errors_per_kloc": 1.9,
+                "predicted_file_switches_per_min": 0.43,
+                "predicted_focus_min": 38.2
+            },
+            "productivity_level": "medium",
+            "recommended_time_windows": [],
+            "task_recommendations": [
+                {
+                    "description": "Standard feature implementation, bug fixes, testing",
+                    "priority": "high",
+                    "reason": "Moderate focus (38min) good for regular development work",
+                    "task_type": "Feature Development",
+                    "time_allocation": "50-60% of allocated hours"
+                },
+                {
+                    "description": "Code documentation, README updates, API docs",
+                    "priority": "medium",
+                    "reason": "Balanced productivity - good for tasks requiring attention but less deep thinking",
+                    "task_type": "Documentation",
+                    "time_allocation": "20-30% of allocated hours"
+                },
+                {
+                    "description": "Team meetings, pair programming, code discussions",
+                    "priority": "medium",
+                    "reason": "File-switching rate (0.4/min) suggests comfortable with context changes",
+                    "task_type": "Meetings & Collaboration",
+                    "time_allocation": "10-20% of allocated hours"
+                }
+            ]
+        },
+        {
+            "allocated_hours": 5.7,
+            "available_hours": 5.7,
+            "date": "2026-01-21",
+            "day_name": "Wednesday",
+            "metrics_summary": {
+                "predicted_errors_per_kloc": 2.1,
+                "predicted_file_switches_per_min": 0.48,
+                "predicted_focus_min": 44.1
+            },
+            "productivity_level": "medium",
+            "recommended_time_windows": [],
+            "task_recommendations": [
+                {
+                    "description": "Standard feature implementation, bug fixes, testing",
+                    "priority": "high",
+                    "reason": "Moderate focus (44min) good for regular development work",
+                    "task_type": "Feature Development",
+                    "time_allocation": "50-60% of allocated hours"
+                },
+                {
+                    "description": "Code documentation, README updates, API docs",
+                    "priority": "medium",
+                    "reason": "Balanced productivity - good for tasks requiring attention but less deep thinking",
+                    "task_type": "Documentation",
+                    "time_allocation": "20-30% of allocated hours"
+                },
+                {
+                    "description": "Team meetings, pair programming, code discussions",
+                    "priority": "medium",
+                    "reason": "File-switching rate (0.5/min) suggests comfortable with context changes",
+                    "task_type": "Meetings & Collaboration",
+                    "time_allocation": "10-20% of allocated hours"
+                }
+            ]
+        },
+        {
+            "allocated_hours": 4.7,
+            "available_hours": 4.7,
+            "date": "2026-01-22",
+            "day_name": "Thursday",
+            "metrics_summary": {
+                "predicted_errors_per_kloc": 2.1,
+                "predicted_file_switches_per_min": 0.45,
+                "predicted_focus_min": 36.6
+            },
+            "productivity_level": "medium",
+            "recommended_time_windows": [],
+            "task_recommendations": [
+                {
+                    "description": "Standard feature implementation, bug fixes, testing",
+                    "priority": "high",
+                    "reason": "Moderate focus (37min) good for regular development work",
+                    "task_type": "Feature Development",
+                    "time_allocation": "50-60% of allocated hours"
+                },
+                {
+                    "description": "Code documentation, README updates, API docs",
+                    "priority": "medium",
+                    "reason": "Balanced productivity - good for tasks requiring attention but less deep thinking",
+                    "task_type": "Documentation",
+                    "time_allocation": "20-30% of allocated hours"
+                },
+                {
+                    "description": "Team meetings, pair programming, code discussions",
+                    "priority": "medium",
+                    "reason": "File-switching rate (0.4/min) suggests comfortable with context changes",
+                    "task_type": "Meetings & Collaboration",
+                    "time_allocation": "10-20% of allocated hours"
+                }
+            ]
+        },
+        {
+            "allocated_hours": 4.6,
+            "available_hours": 4.6,
+            "date": "2026-01-23",
+            "day_name": "Friday",
+            "metrics_summary": {
+                "predicted_errors_per_kloc": 2,
+                "predicted_file_switches_per_min": 0.44,
+                "predicted_focus_min": 36
+            },
+            "productivity_level": "medium",
+            "recommended_time_windows": [],
+            "task_recommendations": [
+                {
+                    "description": "Standard feature implementation, bug fixes, testing",
+                    "priority": "high",
+                    "reason": "Moderate focus (36min) good for regular development work",
+                    "task_type": "Feature Development",
+                    "time_allocation": "50-60% of allocated hours"
+                },
+                {
+                    "description": "Code documentation, README updates, API docs",
+                    "priority": "medium",
+                    "reason": "Balanced productivity - good for tasks requiring attention but less deep thinking",
+                    "task_type": "Documentation",
+                    "time_allocation": "20-30% of allocated hours"
+                },
+                {
+                    "description": "Team meetings, pair programming, code discussions",
+                    "priority": "medium",
+                    "reason": "File-switching rate (0.4/min) suggests comfortable with context changes",
+                    "task_type": "Meetings & Collaboration",
+                    "time_allocation": "10-20% of allocated hours"
+                }
+            ]
+        },
+        {
+            "allocated_hours": 4.6,
+            "available_hours": 4.6,
+            "date": "2026-01-24",
+            "day_name": "Saturday",
+            "metrics_summary": {
+                "predicted_errors_per_kloc": 2,
+                "predicted_file_switches_per_min": 0.44,
+                "predicted_focus_min": 36.1
+            },
+            "productivity_level": "medium",
+            "recommended_time_windows": [],
+            "task_recommendations": [
+                {
+                    "description": "Standard feature implementation, bug fixes, testing",
+                    "priority": "high",
+                    "reason": "Moderate focus (36min) good for regular development work",
+                    "task_type": "Feature Development",
+                    "time_allocation": "50-60% of allocated hours"
+                },
+                {
+                    "description": "Code documentation, README updates, API docs",
+                    "priority": "medium",
+                    "reason": "Balanced productivity - good for tasks requiring attention but less deep thinking",
+                    "task_type": "Documentation",
+                    "time_allocation": "20-30% of allocated hours"
+                },
+                {
+                    "description": "Team meetings, pair programming, code discussions",
+                    "priority": "medium",
+                    "reason": "File-switching rate (0.4/min) suggests comfortable with context changes",
+                    "task_type": "Meetings & Collaboration",
+                    "time_allocation": "10-20% of allocated hours"
+                }
+            ]
+        },
+        {
+            "allocated_hours": 4.6,
+            "available_hours": 4.6,
+            "date": "2026-01-25",
+            "day_name": "Sunday",
+            "metrics_summary": {
+                "predicted_errors_per_kloc": 2,
+                "predicted_file_switches_per_min": 0.44,
+                "predicted_focus_min": 36.1
+            },
+            "productivity_level": "medium",
+            "recommended_time_windows": [],
+            "task_recommendations": [
+                {
+                    "description": "Standard feature implementation, bug fixes, testing",
+                    "priority": "high",
+                    "reason": "Moderate focus (36min) good for regular development work",
+                    "task_type": "Feature Development",
+                    "time_allocation": "50-60% of allocated hours"
+                },
+                {
+                    "description": "Code documentation, README updates, API docs",
+                    "priority": "medium",
+                    "reason": "Balanced productivity - good for tasks requiring attention but less deep thinking",
+                    "task_type": "Documentation",
+                    "time_allocation": "20-30% of allocated hours"
+                },
+                {
+                    "description": "Team meetings, pair programming, code discussions",
+                    "priority": "medium",
+                    "reason": "File-switching rate (0.4/min) suggests comfortable with context changes",
+                    "task_type": "Meetings & Collaboration",
+                    "time_allocation": "10-20% of allocated hours"
+                }
+            ]
+        },
+        {
+            "allocated_hours": 4.4,
+            "available_hours": 4.4,
+            "date": "2026-01-26",
+            "day_name": "Monday",
+            "metrics_summary": {
+                "predicted_errors_per_kloc": 2,
+                "predicted_file_switches_per_min": 0.44,
+                "predicted_focus_min": 35.1
+            },
+            "productivity_level": "medium",
+            "recommended_time_windows": [],
+            "task_recommendations": [
+                {
+                    "description": "Standard feature implementation, bug fixes, testing",
+                    "priority": "high",
+                    "reason": "Moderate focus (35min) good for regular development work",
+                    "task_type": "Feature Development",
+                    "time_allocation": "50-60% of allocated hours"
+                },
+                {
+                    "description": "Code documentation, README updates, API docs",
+                    "priority": "medium",
+                    "reason": "Balanced productivity - good for tasks requiring attention but less deep thinking",
+                    "task_type": "Documentation",
+                    "time_allocation": "20-30% of allocated hours"
+                },
+                {
+                    "description": "Team meetings, pair programming, code discussions",
+                    "priority": "medium",
+                    "reason": "File-switching rate (0.4/min) suggests comfortable with context changes",
+                    "task_type": "Meetings & Collaboration",
+                    "time_allocation": "10-20% of allocated hours"
+                }
+            ]
+        }
+    ],
+    "feasibility_score": 83.6,
+    "generated_at": "2026-01-19T22:12:43.940845",
+    "is_feasible": false,
+    "plan_end_date": "2026-01-26",
+    "plan_start_date": "2026-01-20",
+    "status": "success",
+    "target_adjustment": {
+        "confidence": 83.6,
+        "original_target": 40,
+        "predicted_capacity": 33.4,
+        "reason": "Your target (40h) requires 20% stretch beyond predicted capacity (33.4h). Consider targeting 38.5h with focused effort, or 33.4h for sustainable pace.",
+        "stretch_percentage": 19.6,
+        "stretch_required": 6.6,
+        "suggested_target": 38.5,
+        "type": "stretch_goal"
+    },
+    "target_hours": 40,
+    "total_available_hours": 33.4,
+    "user_id": "test_user_high_performer",
+    "warnings": [
+        {
+            "action": "Consider reducing scope or extending timeline",
+            "message": "Target adjusted: 40h requested \u00e2\u2020\u2019 31.8h recommended based on predictions. You can still aim for 40h but expect to stretch capacity.",
+            "severity": "info",
+            "type": "target_adjustment"
+        }
+    ]
+}

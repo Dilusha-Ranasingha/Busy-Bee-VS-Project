@@ -94,8 +94,8 @@ class ForecastService:
             # Get recent data for context
             recent_data = self.feature_engineer.fetch_user_data(user_id, days=30)
             
-            # Generate predictions
-            predictions = self.forecaster.predict(model, recent_data, days)
+            # Generate predictions with user_id
+            predictions = self.forecaster.predict(model, recent_data, days, user_id=user_id)
             
             forecast_start = datetime.now().date() + timedelta(days=1)
             forecast_dates = [(forecast_start + timedelta(days=i)).isoformat() for i in range(days)]
