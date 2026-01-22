@@ -187,4 +187,109 @@ class TimePatternService:
             
             current_date += timedelta(days=1)
         
-        return daily_recommendations
+        return daily_recommendations    
+    def get_hourly_productivity_scores(self, user_id: str, target_date: datetime, days_history: int = 60) -> Dict[int, float]:
+        """
+        Calculate productivity score for each hour of the day based on historical patterns
+        
+        Args:
+            user_id: User identifier
+            target_date: The date to predict for (to get weekday pattern)
+            days_history: Number of historical days to analyze
+            
+        Returns:
+            Dict mapping hour (0-23) to productivity score (0.0-1.0)
+            Example: {9: 0.85, 10: 0.92, 11: 0.78, ...}
+        """
+        conn = None
+        try:
+            conn = psycopg2.connect(**self.db_config)
+            cursor = conn.cursor()
+            
+            day_of_week = target_date.weekday()  # 0=Monday, 6=Sunday
+            
+            # Query to get hour-based productivity for this specific weekday
+            query = """
+                SELECT 
+                    EXTRACT(HOUR FROM start_ts)::INTEGER AS hour,
+                    AVG(duration_min) AS avg_focus,
+                    COUNT(*) AS session_count,
+                    SUM(duration_min) AS total_focus
+                FROM focus_streaks
+                WHERE user_id = %s
+                    AND type = 'global'
+                    AND EXTRACT(DOW FROM start_ts)::INTEGER = %s
+                    AND start_ts >= NOW() - INTERVAL '%s days'
+                    AND duration_min >= 5  -- Include all meaningful sessions
+                GROUP BY hour
+                HAVING COUNT(*) >= 1
+                ORDER BY hour
+            """
+            
+            cursor.execute(query, (user_id, day_of_week, days_history))
+            results = cursor.fetchall()
+            
+            # Calculate scores
+            hourly_scores = {}
+            max_total_focus = 1  # Avoid division by zero
+            
+            # First pass: find maximum for normalization
+            for row in results:
+                hour, avg_focus, count, total_focus = row
+                if total_focus > max_total_focus:
+                    max_total_focus = total_focus
+            
+            # Second pass: calculate normalized scores
+            for row in results:
+                hour, avg_focus, count, total_focus = row
+                
+                # Score components:
+                # 1. Total focus time (40% weight) - indicates frequent productivity at this hour
+                # 2. Average session length (40% weight) - indicates deep work capability
+                # 3. Session consistency (20% weight) - indicates reliability
+                
+                focus_score = min(total_focus / max_total_focus, 1.0) * 0.4
+                quality_score = min(avg_focus / 60, 1.0) * 0.4  # Normalize to 60min max
+                consistency_score = min(count / 10, 1.0) * 0.2  # Normalize to 10 sessions max
+                
+                total_score = focus_score + quality_score + consistency_score
+                hourly_scores[int(hour)] = round(total_score, 3)
+            
+            cursor.close()
+            
+            # Fill in missing hours with low scores (assume low productivity if no data)
+            for hour in range(24):
+                if hour not in hourly_scores:
+                    # Check adjacent hours for interpolation
+                    prev_score = hourly_scores.get(hour - 1, 0.1)
+                    next_score = hourly_scores.get(hour + 1, 0.1)
+                    hourly_scores[hour] = round((prev_score + next_score) / 2, 3) if prev_score > 0 or next_score > 0 else 0.1
+            
+            return hourly_scores
+            
+        except Exception as e:
+            print(f"Error calculating hourly productivity: {str(e)}")
+            # Return default flat scores
+            return {hour: 0.5 for hour in range(24)}
+        finally:
+            if conn:
+                conn.close()
+    
+    def classify_time_slot_quality(self, productivity_score: float) -> str:
+        """
+        Classify time slot based on productivity score
+        
+        Args:
+            productivity_score: Score from 0.0 to 1.0
+            
+        Returns:
+            'peak', 'high', 'moderate', 'low'
+        """
+        if productivity_score >= 0.75:
+            return 'peak'
+        elif productivity_score >= 0.55:
+            return 'high'
+        elif productivity_score >= 0.35:
+            return 'moderate'
+        else:
+            return 'low'

@@ -13,12 +13,37 @@ export interface ForecastPrediction {
   [key: string]: any;
 }
 
+export interface PredictionConfidence {
+  overall_confidence: number;
+  confidence_level: 'high' | 'medium' | 'fair' | 'low' | 'unknown';
+  data_quality: 'excellent' | 'good' | 'acceptable' | 'limited' | 'insufficient' | 'unknown';
+  explanation: string;
+  factors: {
+    data_points: number;
+    data_quantity_score?: number;
+    pattern_stability?: number;
+    data_recency?: number;
+  };
+  metrics_variance?: {
+    focus_cv?: number;
+    switches_stddev?: number;
+    errors_stddev?: number;
+  };
+  // Helper computed properties for UI
+  overall_level?: 'high' | 'medium' | 'fair' | 'low' | 'unknown';
+  overall_score?: number;
+  data_quantity_score?: number;
+  pattern_stability_score?: number;
+  recency_score?: number;
+}
+
 export interface ForecastResponse {
   status: 'success' | 'error';
   user_id?: string;
   forecast_start_date?: string;
   forecast_end_date?: string;
   predictions?: ForecastPrediction[];
+  confidence?: PredictionConfidence;
   generated_at?: string;
   message?: string;
 }
@@ -52,6 +77,23 @@ export interface DailySchedule {
       idle?: number;
       threshold?: number;
     };
+    prediction_basis?: {
+      primary_metric: string;
+      supporting_metrics: string[];
+      reasoning_chain: string[];
+    };
+  }>;
+  hourly_schedule?: Array<{
+    start_hour: number;
+    end_hour: number;
+    time_range: string;
+    task_name: string;
+    duration: number;
+    productivity_score: number;
+    quality_level: 'peak' | 'high' | 'moderate' | 'low';
+    task_color: string;
+    task_icon: string;
+    reasoning: string;
   }>;
   metrics_summary?: {
     predicted_focus_min: number;
@@ -90,6 +132,17 @@ export interface TargetAdjustment {
   reason: string;
 }
 
+export interface WorkProfile {
+  avg_workday_minutes: number;
+  avg_daily_hours: number;
+  max_daily_hours: number;
+  stddev_hours: number;
+  typical_start_hour: number;
+  typical_end_hour: number;
+  work_pattern_type: 'early_bird' | 'night_owl' | 'standard';
+  days_analyzed: number;
+}
+
 export interface ProductivityPlan {
   status: 'success' | 'error';
   user_id?: string;
@@ -103,6 +156,8 @@ export interface ProductivityPlan {
   best_hours?: BestHours;
   warnings?: Warning[];
   target_adjustment?: TargetAdjustment;
+  work_profile?: WorkProfile;
+  prediction_confidence?: PredictionConfidence;
   generated_at?: string;
   message?: string;
 }

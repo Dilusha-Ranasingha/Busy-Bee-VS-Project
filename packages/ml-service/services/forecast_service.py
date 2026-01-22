@@ -97,6 +97,13 @@ class ForecastService:
             # Generate predictions with user_id
             predictions = self.forecaster.predict(model, recent_data, days, user_id=user_id)
             
+            # Calculate prediction confidence
+            confidence_info = self._calculate_prediction_confidence(
+                user_id, 
+                len(recent_data),
+                predictions
+            )
+            
             forecast_start = datetime.now().date() + timedelta(days=1)
             forecast_dates = [(forecast_start + timedelta(days=i)).isoformat() for i in range(days)]
             
@@ -106,6 +113,7 @@ class ForecastService:
                 'forecast_start_date': forecast_dates[0],
                 'forecast_end_date': forecast_dates[-1],
                 'predictions': predictions,
+                'confidence': confidence_info,  # NEW: Confidence metadata
                 'generated_at': datetime.now().isoformat()
             }
         
@@ -187,4 +195,135 @@ class ForecastService:
             return {
                 'status': 'error',
                 'message': str(e)
+            }
+    
+    def _calculate_prediction_confidence(self, user_id: str, data_days: int, predictions: list) -> dict:
+        """
+        Calculate confidence metrics for predictions
+        
+        Args:
+            user_id: User identifier
+            data_days: Number of days of historical data used
+            predictions: List of predictions
+            
+        Returns:
+            dict: Confidence information with scores and explanations
+        """
+        try:
+            from config.database import get_session
+            from sqlalchemy import text
+            
+            session = get_session()
+            
+            # Query to calculate data quality metrics
+            query = text("""
+                WITH recent_data AS (
+                    SELECT 
+                        date,
+                        COALESCE((focus_streak->>'global_focus_streak_max_min')::numeric, 0) as focus,
+                        COALESCE((file_switch->>'file_switch_rate_avg')::numeric, 0) as switches,
+                        COALESCE((diagnostics_per_kloc->>'diagnostics_density_avg_per_kloc')::numeric, 0) as errors
+                    FROM daily_metrics
+                    WHERE user_id = :user_id
+                        AND date >= NOW() - INTERVAL '90 days'
+                        AND is_synthetic = FALSE
+                    ORDER BY date DESC
+                )
+                SELECT 
+                    COUNT(*) as data_points,
+                    STDDEV(focus) as focus_stddev,
+                    STDDEV(switches) as switches_stddev,
+                    STDDEV(errors) as errors_stddev,
+                    AVG(focus) as focus_avg,
+                    AVG(switches) as switches_avg,
+                    AVG(errors) as errors_avg
+                FROM recent_data
+            """)
+            
+            result = session.execute(query, {'user_id': user_id}).fetchone()
+            session.close()
+            
+            if not result or result[0] == 0:
+                return {
+                    'overall_confidence': 0.3,
+                    'confidence_level': 'low',
+                    'data_quality': 'insufficient',
+                    'explanation': 'Insufficient historical data for reliable predictions',
+                    'factors': {
+                        'data_points': 0,
+                        'pattern_stability': 0.0,
+                        'data_recency': 0.0
+                    }
+                }
+            
+            data_points = int(result[0])
+            focus_stddev = float(result[1] or 0)
+            switches_stddev = float(result[2] or 0)
+            errors_stddev = float(result[3] or 0)
+            focus_avg = float(result[4] or 0)
+            
+            # Calculate confidence factors
+            
+            # 1. Data quantity score (0-1)
+            data_quantity_score = min(data_points / 60, 1.0)  # Ideal: 60+ days
+            
+            # 2. Pattern stability score (0-1) - lower variance = higher confidence
+            # Coefficient of variation (CV) = stddev / mean
+            focus_cv = (focus_stddev / focus_avg) if focus_avg > 0 else 1.0
+            pattern_stability_score = max(0, 1.0 - (focus_cv / 2))  # CV > 2 = very unstable
+            
+            # 3. Data recency score (0-1) - how recent is the data
+            days_since_last = data_days
+            data_recency_score = max(0, 1.0 - (days_since_last / 30))  # Decay over 30 days
+            
+            # Overall confidence (weighted average)
+            overall_confidence = (
+                data_quantity_score * 0.4 +
+                pattern_stability_score * 0.4 +
+                data_recency_score * 0.2
+            )
+            
+            # Classify confidence level
+            if overall_confidence >= 0.75:
+                confidence_level = 'high'
+                quality = 'excellent'
+                explanation = f'Strong confidence based on {data_points} days of stable patterns'
+            elif overall_confidence >= 0.55:
+                confidence_level = 'medium'
+                quality = 'good'
+                explanation = f'Moderate confidence with {data_points} days of data'
+            elif overall_confidence >= 0.35:
+                confidence_level = 'fair'
+                quality = 'acceptable'
+                explanation = f'Fair confidence - predictions may vary ({data_points} days analyzed)'
+            else:
+                confidence_level = 'low'
+                quality = 'limited'
+                explanation = f'Low confidence due to limited or unstable data ({data_points} days)'
+            
+            return {
+                'overall_confidence': round(overall_confidence, 3),
+                'confidence_level': confidence_level,
+                'data_quality': quality,
+                'explanation': explanation,
+                'factors': {
+                    'data_points': data_points,
+                    'data_quantity_score': round(data_quantity_score, 2),
+                    'pattern_stability': round(pattern_stability_score, 2),
+                    'data_recency': round(data_recency_score, 2)
+                },
+                'metrics_variance': {
+                    'focus_cv': round(focus_cv, 2),
+                    'switches_stddev': round(switches_stddev, 2),
+                    'errors_stddev': round(errors_stddev, 2)
+                }
+            }
+            
+        except Exception as e:
+            return {
+                'overall_confidence': 0.5,
+                'confidence_level': 'unknown',
+                'data_quality': 'unknown',
+                'explanation': f'Could not calculate confidence: {str(e)}',
+                'factors': {}
             }

@@ -46,8 +46,14 @@ class PlanService:
             if forecast.get('status') == 'error':
                 return forecast
             
-            # Calculate available productive hours per day
-            daily_availability = self._calculate_daily_availability(forecast['predictions'])
+            # Get user's personalized work profile (avg daily hours, typical schedule)
+            work_profile = self._get_user_work_profile(user_id)
+            
+            # Calculate available productive hours per day using user-specific workday duration
+            daily_availability = self._calculate_daily_availability(
+                forecast['predictions'], 
+                work_profile['avg_workday_minutes']
+            )
             
             # Get historical performance data to determine realistic stretch capacity
             historical_stats = self._get_historical_performance_stats(user_id, days_count)
@@ -124,19 +130,20 @@ class PlanService:
                 }
                 actual_allocation_target = target_hours  # Keep their conservative target
             
-            # Generate schedule with actual allocation target
+            # Generate schedule with actual allocation target and work profile
             schedule = self._allocate_hours_smart(
                 daily_availability, 
                 actual_allocation_target,
                 forecast['predictions'],
-                start
+                start,
+                work_profile  # Pass work profile for hourly scheduling
             )
             
             # Time-of-day recommendations from historical patterns
             best_hours = self._get_best_working_hours(user_id, start_date, end_date)
             
             # Generate warnings
-            warnings = self._generate_warnings(forecast['predictions'], target_hours, is_feasible)
+            warnings = self._generate_warnings(forecast['predictions'], target_hours, is_feasible, work_profile['avg_workday_minutes'])
             
             return {
                 'status': 'success',
@@ -146,6 +153,8 @@ class PlanService:
                 'target_hours': target_hours,
                 'adjusted_target': adjusted_target if adjustment_suggestion else None,
                 'target_adjustment': adjustment_suggestion,
+                'work_profile': work_profile,  # NEW: User's personalized work schedule
+                'prediction_confidence': forecast.get('confidence'),  # NEW: Pass confidence from forecast
                 'is_feasible': is_feasible,
                 'feasibility_score': round(feasibility_score, 1),
                 'total_available_hours': round(total_available, 1),
@@ -251,8 +260,126 @@ class PlanService:
                 'weeks_analyzed': 0
             }
     
-    def _calculate_daily_availability(self, predictions):
-        """Calculate available productive hours from predictions"""
+    def _get_user_work_profile(self, user_id: str):
+        """
+        Calculate user's personalized work profile from historical data
+        
+        Returns:
+            dict: Work profile with avg_workday_minutes, avg_daily_hours, 
+                  typical_start_hour, typical_end_hour, work_pattern_type
+        """
+        try:
+            from config.database import get_session
+            from sqlalchemy import text
+            from datetime import datetime, timedelta
+            
+            session = get_session()
+            
+            # Get last 30 days of actual screen time data
+            cutoff_date = datetime.now().date() - timedelta(days=30)
+            
+            # Query to get average active time (actual screen time coding)
+            query = text("""
+                SELECT 
+                    AVG(COALESCE((screen_time->>'active_time_min_from_edits')::numeric, 0)) as avg_active_minutes,
+                    STDDEV(COALESCE((screen_time->>'active_time_min_from_edits')::numeric, 0)) as stddev_active_minutes,
+                    MAX(COALESCE((screen_time->>'active_time_min_from_edits')::numeric, 0)) as max_active_minutes,
+                    COUNT(*) as days_with_data
+                FROM daily_metrics
+                WHERE user_id = :user_id
+                    AND date >= :cutoff_date
+                    AND is_synthetic = FALSE
+                    AND COALESCE((screen_time->>'active_time_min_from_edits')::numeric, 0) > 0
+            """)
+            
+            result = session.execute(query, {
+                'user_id': user_id,
+                'cutoff_date': cutoff_date
+            }).fetchone()
+            
+            # Query to analyze typical work hours from focus_streaks
+            time_pattern_query = text("""
+                SELECT 
+                    EXTRACT(HOUR FROM start_time) as hour,
+                    COUNT(*) as session_count
+                FROM focus_streaks
+                WHERE user_id = :user_id
+                    AND start_time >= :cutoff_date
+                GROUP BY EXTRACT(HOUR FROM start_time)
+                ORDER BY session_count DESC
+                LIMIT 1
+            """)
+            
+            time_result = session.execute(time_pattern_query, {
+                'user_id': user_id,
+                'cutoff_date': cutoff_date
+            }).fetchone()
+            
+            session.close()
+            
+            if result and result[0] is not None and result[3] >= 10:  # At least 10 days of data
+                avg_active_minutes = float(result[0] or 0)
+                stddev_minutes = float(result[1] or 0)
+                max_active_minutes = float(result[2] or 0)
+                
+                # Determine work pattern type based on typical hours
+                typical_start_hour = int(time_result[0]) if time_result else 9
+                
+                if typical_start_hour <= 7:
+                    work_pattern = 'early_bird'
+                elif typical_start_hour >= 11:
+                    work_pattern = 'night_owl'
+                else:
+                    work_pattern = 'standard'
+                
+                # Calculate typical end hour (start + avg_hours)
+                avg_daily_hours = avg_active_minutes / 60
+                typical_end_hour = typical_start_hour + int(avg_daily_hours)
+                
+                return {
+                    'avg_workday_minutes': round(avg_active_minutes, 1),
+                    'avg_daily_hours': round(avg_daily_hours, 1),
+                    'max_daily_hours': round(max_active_minutes / 60, 1),
+                    'stddev_hours': round(stddev_minutes / 60, 1),
+                    'typical_start_hour': typical_start_hour,
+                    'typical_end_hour': min(typical_end_hour, 23),
+                    'work_pattern_type': work_pattern,
+                    'days_analyzed': int(result[3])
+                }
+            else:
+                # Insufficient data - use conservative defaults
+                return {
+                    'avg_workday_minutes': 360.0,  # 6 hours (conservative)
+                    'avg_daily_hours': 6.0,
+                    'max_daily_hours': 8.0,
+                    'stddev_hours': 1.5,
+                    'typical_start_hour': 9,
+                    'typical_end_hour': 17,
+                    'work_pattern_type': 'standard',
+                    'days_analyzed': 0
+                }
+                
+        except Exception as e:
+            # Fallback to safe defaults if query fails
+            return {
+                'avg_workday_minutes': 360.0,
+                'avg_daily_hours': 6.0,
+                'max_daily_hours': 8.0,
+                'stddev_hours': 1.5,
+                'typical_start_hour': 9,
+                'typical_end_hour': 17,
+                'work_pattern_type': 'standard',
+                'days_analyzed': 0
+            }
+    
+    def _calculate_daily_availability(self, predictions, user_workday_minutes):
+        """
+        Calculate available productive hours from predictions using user-specific workday duration
+        
+        Args:
+            predictions: List of daily predictions
+            user_workday_minutes: User's average workday duration from historical data
+        """
         daily_hours = []
         
         for pred in predictions:
@@ -262,24 +389,171 @@ class PlanService:
             # Extract idle time (assume in minutes)
             idle_time = pred.get('idle_distraction_time', 30)
             
-            # Estimate available hours (simple heuristic)
-            # Assume 8-hour workday, subtract idle, use focus as productivity indicator
-            available = max(0, (480 - idle_time) / 60 * (focus_time / 60))
-            available = min(available, 10)  # Cap at 10 hours per day
+            # DYNAMIC: Use user's actual average workday duration instead of static 480min
+            # Estimate available hours: (user_workday - idle) * (focus/60 as productivity factor)
+            available = max(0, (user_workday_minutes - idle_time) / 60 * (focus_time / 60))
+            
+            # Cap at user's typical max + 20% (allow for stretch days)
+            max_daily_cap = (user_workday_minutes / 60) * 1.2
+            available = min(available, max_daily_cap)
             
             daily_hours.append(available)
         
         return daily_hours
     
-    def _allocate_hours_smart(self, daily_availability, target_hours, predictions, start_date):
+    def _generate_hourly_schedule(self, date, allocated_hours, prediction, work_profile):
         """
-        Smart allocation with task recommendations and time windows
+        Generate hourly time-block schedule for a specific day
+        
+        Args:
+            date: Date object for the day
+            allocated_hours: Target hours to schedule
+            prediction: ML predictions for this day
+            work_profile: User's work profile with typical schedule
+            
+        Returns:
+            List of hourly time blocks with task assignments
+        """
+        # Get hourly productivity scores for this specific day
+        hourly_scores = self.time_pattern_service.get_hourly_productivity_scores(
+            prediction.get('user_id', ''),
+            date,
+            days_history=60
+        )
+        
+        # Define task types and their requirements
+        task_types = [
+            {
+                'name': 'Deep Work (Feature Development)',
+                'duration': 2.0,  # 2 hours
+                'min_productivity': 0.65,  # Needs high productivity
+                'color': 'blue',
+                'icon': '🎯',
+                'requirement': 'High focus required'
+            },
+            {
+                'name': 'Code Review & Refactoring',
+                'duration': 1.0,
+                'min_productivity': 0.50,
+                'color': 'green',
+                'icon': '🔍',
+                'requirement': 'Moderate focus'
+            },
+            {
+                'name': 'Testing & Debugging',
+                'duration': 1.5,
+                'min_productivity': 0.45,
+                'color': 'yellow',
+                'icon': '🐛',
+                'requirement': 'Moderate focus'
+            },
+            {
+                'name': 'Documentation',
+                'duration': 1.0,
+                'min_productivity': 0.40,
+                'color': 'purple',
+                'icon': '📝',
+                'requirement': 'Low-moderate focus'
+            },
+            {
+                'name': 'Meetings & Planning',
+                'duration': 0.5,
+                'min_productivity': 0.20,
+                'color': 'gray',
+                'icon': '💬',
+                'requirement': 'Flexible timing'
+            }
+        ]
+        
+        # Create hourly slots within work hours
+        start_hour = work_profile.get('typical_start_hour', 9)
+        end_hour = work_profile.get('typical_end_hour', 17)
+        
+        # Build available time slots
+        time_slots = []
+        for hour in range(start_hour, min(end_hour, 24)):
+            quality = self.time_pattern_service.classify_time_slot_quality(hourly_scores.get(hour, 0.3))
+            time_slots.append({
+                'hour': hour,
+                'productivity_score': hourly_scores.get(hour, 0.3),
+                'quality': quality,
+                'allocated_task': None
+            })
+        
+        # Sort slots by productivity (best first)
+        time_slots.sort(key=lambda x: x['productivity_score'], reverse=True)
+        
+        # Allocate tasks to time slots
+        scheduled_blocks = []
+        remaining_hours = allocated_hours
+        used_slots = set()
+        
+        for task in task_types:
+            if remaining_hours <= 0:
+                break
+            
+            # Find suitable time slot for this task
+            for slot in time_slots:
+                if slot['hour'] in used_slots:
+                    continue
+                
+                if slot['productivity_score'] >= task['min_productivity']:
+                    # Calculate end hour
+                    duration_hours = min(task['duration'], remaining_hours)
+                    end_hour_calc = slot['hour'] + int(duration_hours)
+                    if duration_hours % 1 > 0:  # Has 30min component
+                        end_hour_calc += 1
+                    
+                    # Format time range
+                    start_time = self._format_hour(slot['hour'])
+                    end_time = self._format_hour(end_hour_calc)
+                    
+                    scheduled_blocks.append({
+                        'start_hour': slot['hour'],
+                        'end_hour': end_hour_calc,
+                        'time_range': f"{start_time}-{end_time}",
+                        'task_name': task['name'],
+                        'duration': duration_hours,
+                        'productivity_score': slot['productivity_score'],
+                        'quality_level': slot['quality'],
+                        'task_color': task['color'],
+                        'task_icon': task['icon'],
+                        'reasoning': f"{task['requirement']} • Score: {slot['productivity_score']:.2f}"
+                    })
+                    
+                    # Mark hours as used
+                    for h in range(slot['hour'], end_hour_calc):
+                        used_slots.add(h)
+                    
+                    remaining_hours -= duration_hours
+                    break
+        
+        # Sort by start hour for chronological display
+        scheduled_blocks.sort(key=lambda x: x['start_hour'])
+        
+        return scheduled_blocks
+    
+    def _format_hour(self, hour: int) -> str:
+        """Format hour as 12-hour time string"""
+        if hour == 0:
+            return "12am"
+        elif hour < 12:
+            return f"{hour}am"
+        elif hour == 12:
+            return "12pm"
+        else:
+            return f"{hour-12}pm"
+    
+    def _allocate_hours_smart(self, daily_availability, target_hours, predictions, start_date, work_profile):
+        """
+        Smart allocation with task recommendations, time windows, and hourly schedules
         
         Args:
             daily_availability: List of available hours per day
             target_hours: Target hours to allocate
             predictions: ML predictions for each day
             start_date: Starting date object
+            work_profile: User's work profile for hourly scheduling
         """
         schedule = []
         total_available = sum(daily_availability)
@@ -288,8 +562,8 @@ class PlanService:
             return schedule
         
         for i, (available, pred) in enumerate(zip(daily_availability, predictions)):
-            # Calculate date for this day
-            current_date = start_date + timedelta(days=i)
+            # Get date from prediction (already has correct date from forecast)
+            current_date = datetime.fromisoformat(pred['date']).date()
             
             # Allocate proportionally
             allocated = (available / total_available) * target_hours
@@ -314,6 +588,14 @@ class PlanService:
             # Generate task recommendations based on predicted metrics
             task_recommendations = self._generate_task_recommendations(pred, productivity_level)
             
+            # NEW: Generate hourly time-block schedule
+            hourly_schedule = self._generate_hourly_schedule(
+                current_date,
+                allocated,
+                pred,
+                work_profile
+            )
+            
             # Format time windows
             time_windows = []
             if day_time_info and day_time_info.get('session_count', 0) > 0:
@@ -333,6 +615,7 @@ class PlanService:
                 'productivity_level': productivity_level,
                 'recommended_time_windows': time_windows,
                 'task_recommendations': task_recommendations,
+                'hourly_schedule': hourly_schedule,  # NEW: Detailed hourly time blocks
                 'metrics_summary': {
                     'predicted_focus_min': round(pred.get('focus_streak_longest_global', 0), 1),
                     'predicted_file_switches_per_min': round(pred.get('file_switch_avg_rate', 0), 2),
@@ -346,14 +629,14 @@ class PlanService:
     
     def _generate_task_recommendations(self, prediction, productivity_level):
         """
-        Generate intelligent task recommendations based on predictions
+        Generate intelligent task recommendations based on predictions with explicit metric links
         
         Args:
             prediction: Day's ML predictions
             productivity_level: 'high', 'medium', or 'low'
             
         Returns:
-            List of task recommendations with reasoning
+            List of task recommendations with reasoning and prediction links
         """
         recommendations = []
         
@@ -364,6 +647,16 @@ class PlanService:
         commits = prediction.get('commits_count', 0)
         idle = prediction.get('idle_distraction_time', 0)
         
+        # Create prediction context for linking
+        prediction_context = {
+            'focus': focus,
+            'file_switch': file_switch,
+            'errors': errors,
+            'edits': edits,
+            'commits': commits,
+            'idle': idle
+        }
+        
         # Deep work recommendation (high focus, low switching)
         if productivity_level == 'high':
             recommendations.append({
@@ -372,7 +665,16 @@ class PlanService:
                 'description': f'Focus: {focus:.0f}min | Switch Rate: {file_switch:.2f}/min | Errors: {errors:.1f}/kloc | Edits: {edits:.1f}/min',
                 'reason': f'High focus capability ({focus:.0f}min) with low context-switching ({file_switch:.2f}/min) creates optimal conditions for deep concentration. Low error rate ({errors:.1f}/kloc) indicates strong analytical state.',
                 'time_allocation': '60-70% of allocated hours',
-                'metrics': {'focus': focus, 'file_switch': file_switch, 'errors': errors, 'edits': edits}
+                'metrics': {'focus': focus, 'file_switch': file_switch, 'errors': errors, 'edits': edits},
+                'prediction_basis': {
+                    'primary_metric': 'focus_streak_longest_global',
+                    'supporting_metrics': ['file_switch_avg_rate', 'diagnostics_avg_density'],
+                    'reasoning_chain': [
+                        f'Predicted focus time of {focus:.0f}min indicates strong concentration capacity',
+                        f'Low file switching ({file_switch:.2f}/min) means less context loss',
+                        f'Low error rate ({errors:.1f}/kloc) suggests careful, methodical work'
+                    ]
+                }
             })
             recommendations.append({
                 'task_type': f'Detailed Code Reviews & Refactoring',
@@ -380,7 +682,15 @@ class PlanService:
                 'description': f'Error Rate: {errors:.1f}/kloc | Edit Rate: {edits:.1f}/min | Commits: {commits:.0f}',
                 'reason': f'Low predicted error density ({errors:.1f}/kloc) and steady edit rate ({edits:.1f}/min) suggest good pattern recognition for code quality assessment.',
                 'time_allocation': '20-30% of allocated hours',
-                'metrics': {'errors': errors, 'edits': edits, 'commits': commits}
+                'metrics': {'errors': errors, 'edits': edits, 'commits': commits},
+                'prediction_basis': {
+                    'primary_metric': 'diagnostics_avg_density',
+                    'supporting_metrics': ['edits_avg_rate'],
+                    'reasoning_chain': [
+                        f'Low error prediction ({errors:.1f}/kloc) indicates quality-focused mindset',
+                        f'Steady edit rate ({edits:.1f}/min) good for detailed review work'
+                    ]
+                }
             })
         
         # Medium productivity - balanced tasks
@@ -561,12 +871,12 @@ class PlanService:
                 'reason': 'Higher predicted error rate - take breaks and work when most alert'
             }
     
-    def _generate_warnings(self, predictions, target_hours, is_feasible):
+    def _generate_warnings(self, predictions, target_hours, is_feasible, user_workday_minutes):
         """Generate early warnings based on predictions"""
         warnings = []
         
         if not is_feasible:
-            total_available = sum(self._calculate_daily_availability(predictions))
+            total_available = sum(self._calculate_daily_availability(predictions, user_workday_minutes))
             warnings.append({
                 'type': 'target_adjustment',
                 'severity': 'info',

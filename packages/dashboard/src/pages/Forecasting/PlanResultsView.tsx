@@ -114,6 +114,98 @@ const PlanResultsView: React.FC<PlanResultsViewProps> = ({ plan, onClose }) => {
         )}
       </div>
 
+      {/* Work Profile - NEW: Personalized Work Schedule */}
+      {plan.work_profile && (
+        <div className="bg-gradient-to-br from-blue-900/30 to-purple-900/20 rounded-lg p-4 border border-blue-700/50">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">👤</span>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-blue-200 mb-2">Your Work Profile</h4>
+              
+              <div className="grid grid-cols-2 gap-3 mb-3">
+                <div className="bg-gray-700/40 rounded p-2">
+                  <div className="text-xs text-gray-400">Avg Daily Hours</div>
+                  <div className="text-lg font-semibold text-white">
+                    {plan.work_profile.avg_daily_hours.toFixed(1)}h
+                  </div>
+                  <div className="text-xs text-gray-400">
+                    ± {plan.work_profile.stddev_hours.toFixed(1)}h
+                  </div>
+                </div>
+                
+                <div className="bg-gray-700/40 rounded p-2">
+                  <div className="text-xs text-gray-400">Typical Schedule</div>
+                  <div className="text-lg font-semibold text-white">
+                    {plan.work_profile.typical_start_hour}:00 - {plan.work_profile.typical_end_hour}:00
+                  </div>
+                  <div className="text-xs text-blue-300 capitalize">
+                    {plan.work_profile.work_pattern_type.replace('_', ' ')}
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2 text-xs text-gray-400">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Based on {plan.work_profile.days_analyzed} days of your actual screen time
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Prediction Confidence - NEW: Phase 3 */}
+      {plan.prediction_confidence && (
+        <div className="bg-gradient-to-br from-purple-900/30 to-indigo-900/20 rounded-lg p-4 border border-purple-700/50">
+          <div className="flex items-start gap-3">
+            <span className="text-2xl">🎯</span>
+            <div className="flex-1">
+              <h4 className="text-sm font-semibold text-purple-200 mb-2">Prediction Confidence</h4>
+              
+              <div className="flex items-center gap-3 mb-3">
+                <div className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                  plan.prediction_confidence.confidence_level === 'high' ? 'bg-green-500/20 text-green-300 border border-green-500/50' :
+                  plan.prediction_confidence.confidence_level === 'medium' ? 'bg-blue-500/20 text-blue-300 border border-blue-500/50' :
+                  plan.prediction_confidence.confidence_level === 'fair' ? 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/50' :
+                  'bg-red-500/20 text-red-300 border border-red-500/50'
+                }`}>
+                  {plan.prediction_confidence.confidence_level.toUpperCase()}
+                </div>
+                <span className="text-2xl font-bold text-white">
+                  {Math.round(plan.prediction_confidence.overall_confidence * 100)}%
+                </span>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2 mb-2">
+                <div className="bg-gray-700/40 rounded p-2">
+                  <div className="text-xs text-gray-400">Data Quantity</div>
+                  <div className="text-sm font-semibold text-white">
+                    {Math.round((plan.prediction_confidence.factors?.data_quantity_score || 0) * 100)}%
+                  </div>
+                </div>
+                <div className="bg-gray-700/40 rounded p-2">
+                  <div className="text-xs text-gray-400">Pattern Stability</div>
+                  <div className="text-sm font-semibold text-white">
+                    {Math.round((plan.prediction_confidence.factors?.pattern_stability || 0) * 100)}%
+                  </div>
+                </div>
+                <div className="bg-gray-700/40 rounded p-2">
+                  <div className="text-xs text-gray-400">Recency</div>
+                  <div className="text-sm font-semibold text-white">
+                    {Math.round((plan.prediction_confidence.factors?.data_recency || 0) * 100)}%
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-xs text-gray-400">
+                {plan.prediction_confidence.explanation}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Daily Plan - Detailed */}
       {plan.daily_schedule && plan.daily_schedule.length > 0 && (
         <div>
@@ -202,13 +294,72 @@ const PlanResultsView: React.FC<PlanResultsViewProps> = ({ plan, onClose }) => {
                   </div>
                 )}
 
+                {/* NEW: Hourly Time-Block Schedule */}
+                {day.hourly_schedule && day.hourly_schedule.length > 0 && (
+                  <div className="mb-3">
+                    <div className="text-xs font-semibold text-gray-400 mb-2">⏰ Hourly Schedule:</div>
+                    <div className="space-y-2">
+                      {day.hourly_schedule.map((block, idx) => {
+                        const colorClasses = {
+                          blue: 'bg-blue-600 border-blue-500',
+                          green: 'bg-green-600 border-green-500',
+                          yellow: 'bg-yellow-600 border-yellow-500',
+                          purple: 'bg-purple-600 border-purple-500',
+                          gray: 'bg-gray-600 border-gray-500'
+                        }[block.task_color] || 'bg-gray-600 border-gray-500';
+
+                        const qualityBadge = {
+                          peak: { text: 'PEAK', color: 'bg-green-700 text-green-100' },
+                          high: { text: 'HIGH', color: 'bg-blue-700 text-blue-100' },
+                          moderate: { text: 'MOD', color: 'bg-yellow-700 text-yellow-100' },
+                          low: { text: 'LOW', color: 'bg-gray-700 text-gray-300' }
+                        }[block.quality_level] || { text: 'N/A', color: 'bg-gray-700' };
+
+                        return (
+                          <div
+                            key={idx}
+                            className={`${colorClasses} border-l-4 rounded px-3 py-2 hover:opacity-90 transition-opacity`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg">{block.task_icon}</span>
+                                <span className="text-white font-semibold text-sm">
+                                  {block.time_range}
+                                </span>
+                                <span className={`text-xs px-2 py-0.5 rounded font-medium ${qualityBadge.color}`}>
+                                  {qualityBadge.text}
+                                </span>
+                              </div>
+                              <span className="text-xs text-white opacity-90">
+                                {block.duration.toFixed(1)}h
+                              </span>
+                            </div>
+                            <div className="text-sm text-white font-medium mb-1">
+                              {block.task_name}
+                            </div>
+                            <div className="text-xs text-white opacity-75">
+                              {block.reasoning}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Task Recommendations */}
                 {day.task_recommendations && day.task_recommendations.length > 0 && (
                   <div>
                     <div className="text-xs font-semibold text-gray-400 mb-2">✅ Recommended Tasks:</div>
                     <div className="space-y-1.5">
                       {day.task_recommendations.map((task, idx) => (
-                        <div key={idx} className="bg-gray-600/30 rounded px-3 py-2">
+                        <div key={idx} className="bg-gray-600/30 rounded px-3 py-2 relative">
+                          {/* Visual indicator for prediction-linked recommendations */}
+                          {(task as any).prediction_basis && (
+                            <div className="absolute top-2 right-2">
+                              <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse" title="Linked to predictions"></div>
+                            </div>
+                          )}
                           <div className="flex items-start gap-2">
                             <div className="flex-1">
                               <div className="flex items-center gap-2 mb-1">
@@ -239,6 +390,30 @@ const PlanResultsView: React.FC<PlanResultsViewProps> = ({ plan, onClose }) => {
                                 <div className="text-xs text-blue-300 mt-1">
                                   🕒 {(task as any).time_allocation}
                                 </div>
+                              )}
+                              {/* NEW: Prediction Basis Explanation */}
+                              {(task as any).prediction_basis && (
+                                <details className="mt-2">
+                                  <summary className="text-xs text-purple-300 cursor-pointer hover:text-purple-200">
+                                    🔗 Why this recommendation? (Click to expand)
+                                  </summary>
+                                  <div className="mt-2 pl-4 border-l-2 border-purple-500/30 space-y-1">
+                                    <div className="text-xs text-gray-300">
+                                      <strong className="text-purple-300">Based on:</strong> {(task as any).prediction_basis.primary_metric}
+                                    </div>
+                                    <div className="text-xs text-gray-400">
+                                      <strong>Supporting metrics:</strong> {(task as any).prediction_basis.supporting_metrics.join(', ')}
+                                    </div>
+                                    <div className="text-xs text-gray-400 space-y-0.5 mt-2">
+                                      <strong className="text-purple-300">Reasoning:</strong>
+                                      <ul className="list-disc pl-4 space-y-0.5">
+                                        {(task as any).prediction_basis.reasoning_chain.map((reason: string, ridx: number) => (
+                                          <li key={ridx}>{reason}</li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  </div>
+                                </details>
                               )}
                             </div>
                           </div>

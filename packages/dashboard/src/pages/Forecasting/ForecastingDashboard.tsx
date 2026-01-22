@@ -97,6 +97,67 @@ const ForecastingDashboard: React.FC = () => {
         onTrain={handleTrainModel}
       />
 
+      {/* Prediction Confidence Indicator */}
+      {!forecastLoading && !forecastError && forecast?.confidence && (
+        <div className={`rounded-lg p-4 border ${
+          forecast.confidence.confidence_level === 'high' 
+            ? 'bg-green-900/20 border-green-700'
+            : forecast.confidence.confidence_level === 'medium'
+            ? 'bg-blue-900/20 border-blue-700'
+            : forecast.confidence.confidence_level === 'fair'
+            ? 'bg-yellow-900/20 border-yellow-700'
+            : 'bg-red-900/20 border-red-700'
+        }`}>
+          <div className="flex items-start gap-3">
+            <div className="text-3xl">
+              {forecast.confidence.confidence_level === 'high' && '🎯'}
+              {forecast.confidence.confidence_level === 'medium' && '📊'}
+              {forecast.confidence.confidence_level === 'fair' && '⚠️'}
+              {forecast.confidence.confidence_level === 'low' && '📉'}
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-lg font-semibold text-white">Prediction Confidence</h3>
+                <span className={`text-sm font-bold px-3 py-1 rounded ${
+                  forecast.confidence.confidence_level === 'high'
+                    ? 'bg-green-700 text-green-100'
+                    : forecast.confidence.confidence_level === 'medium'
+                    ? 'bg-blue-700 text-blue-100'
+                    : forecast.confidence.confidence_level === 'fair'
+                    ? 'bg-yellow-700 text-yellow-100'
+                    : 'bg-red-700 text-red-100'
+                }`}>
+                  {forecast.confidence.confidence_level.toUpperCase()} ({(forecast.confidence.overall_confidence * 100).toFixed(0)}%)
+                </span>
+              </div>
+              <p className="text-gray-300 text-sm mb-3">
+                {forecast.confidence.explanation}
+              </p>
+              <div className="grid grid-cols-3 gap-3 text-xs">
+                <div className="bg-gray-700/50 rounded p-2">
+                  <div className="text-gray-400">Data Points</div>
+                  <div className="text-white font-semibold">
+                    {forecast.confidence.factors.data_points} days
+                  </div>
+                </div>
+                <div className="bg-gray-700/50 rounded p-2">
+                  <div className="text-gray-400">Pattern Stability</div>
+                  <div className="text-white font-semibold">
+                    {((forecast.confidence.factors.pattern_stability || 0) * 100).toFixed(0)}%
+                  </div>
+                </div>
+                <div className="bg-gray-700/50 rounded p-2">
+                  <div className="text-gray-400">Data Quality</div>
+                  <div className="text-white font-semibold capitalize">
+                    {forecast.confidence.data_quality}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Forecast Charts */}
       {forecastError && (
         <div className="bg-red-900/20 border border-red-700 rounded-lg p-4">
