@@ -35,7 +35,7 @@
         {
           "id": "busy-bee-container",
           "title": "Busy Bee",
-          "icon": "./resources/bee-icon.svg"
+          "icon": "./resources/bee-icon-p.svg"
         }
       ]
     },
